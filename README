@@ -1,0 +1,57 @@
+vsp-tests
+---------
+
+Test suite for the Renesas R-Car VSP1 and VSP2 video processing engines.
+
+You can find the latest version of vsp-tests in the project's git tree at
+
+	git://git.ideasonboard.com/renesas/vsp-tests.git
+	http://git.ideasonboard.com/renesas/vsp-tests.git
+
+
+--------
+Building
+--------
+
+The vsp-tests suite requires the following tools to be installed on the host
+to generate the test script and test data.
+
+* make
+* python
+
+After installing the needed packages, you can build the test suite by running
+
+	make
+
+in the vsp-tests root directory. Then, to install the test suite, run
+
+	make install INSTALL_DIR=/path/to/target/directory
+
+This will copy the test scripts and data to the target directory to be copied
+or exported to the host. As test data take more than 200MB of disk space usage
+of nfsroot is recommended to run the tests.
+
+
+--------------------
+Runtime Dependencies
+--------------------
+
+The tests scripts require the following tools to be installed on the target
+system in a directory included in $PATH.
+
+* compare (part of ImageMagick)
+* media-ctl (part of v4l-utils, available at git://linuxtv.org/v4l-utils.git)
+* raw2rgbpnm (available at git://git.retiisi.org.uk/~sailus/raw2rgbpnm.git)
+* yavta (available at git://git.ideasonboard.org/yavta.git)
+
+All but the HGO test can be run with the latest version of these tools. To
+test the HGO, the 'metadata' branch of 'yavta' is currently needed.
+
+
+-----------------
+Running the Tests
+-----------------
+
+The test scripts are named vsp-unit-test-[0-9]*.sh. They can be run directly
+from the test suite root directory.
+
