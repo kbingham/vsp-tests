@@ -102,11 +102,10 @@ execute() {
 	case $cmd in
 	hgo)
 		if [ "x$options" = xinfinite ] ; then
-			$yavta -c -n 4 \
-				`$mediactl -d $mdev -e "$dev hgo histo"`
+			$yavta -c -n 4 $(vsp1_entity_subdev "hgo histo")
 		else
 			$yavta -c10 -n 10 --file=histo-#.bin $options \
-				`$mediactl -d $mdev -e "$dev hgo histo"`
+				$(vsp1_entity_subdev "hgo histo")
 		fi
 		;;
 
@@ -119,10 +118,10 @@ execute() {
 
 		if [ "x$options" = xinfinite ] ; then
 			$yavta -c -n 4 -f $infmt -s $size --file=$file $options \
-				`$mediactl -d $mdev -e "$dev $rpf input"`
+				$(vsp1_entity_subdev "$rpf input")
 		else
 			$yavta -c10 -n 4 -f $infmt -s $size --file=$file $options \
-				`$mediactl -d $mdev -e "$dev $rpf input"`
+				$(vsp1_entity_subdev "$rpf input")
 		fi
 
 		rm -f $file
@@ -134,10 +133,10 @@ execute() {
 
 		if [ "x$options" = xinfinite ] ; then
 			$yavta -c -n 4 -f $outfmt -s $size \
-				`$mediactl -d $mdev -e "$dev $wpf output"`
+				$(vsp1_entity_subdev "$wpf output")
 		else
 			$yavta -c10 -n 4 -f $outfmt -s $size --skip 7 -F $options \
-				`$mediactl -d $mdev -e "$dev $wpf output"`
+				$(vsp1_entity_subdev "$wpf output")
 		fi
 		;;
 	esac

@@ -31,6 +31,10 @@ vsp1_count_bru_inputs() {
 	echo $((num_pads-1))
 }
 
+vsp1_entity_subdev() {
+	$mediactl -d $mdev -e "$dev $1"
+}
+
 vsp1_entity_get_size() {
 	entity=$1
 	pad=$2
