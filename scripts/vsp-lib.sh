@@ -14,8 +14,26 @@ vsp1_device() {
 
 vsp1_has_feature() {
 	feature=$1
+	entity_name=$(echo $feature | sed 's/\[.*//')
 
-	$mediactl -d $mdev -p | grep -q -- "- entity.*$feature"
+	($mediactl -d $mdev -p | grep -q -- "- entity.*$entity_name") || return
+
+	option=$(echo $feature | cut -d '[' -f 2 -s | cut -d ']' -f 1)
+
+	[ -z $option ] && return
+
+	key=$(echo $option | sed 's/:.*//')
+	value=$(echo $option | sed "s/.*:'\(.*\)'/\1/")
+
+	case $key in
+	control)
+		vsp1_has_control $entity_name "$value"
+		return
+		;;
+	*)
+		return 1
+		;;
+	esac
 }
 
 vsp1_count_rpfs() {
@@ -41,6 +59,13 @@ vsp1_entity_get_size() {
 
 	$mediactl -d $mdev --get-v4l2 "'$dev $entity':$pad" | grep fmt | \
 	      sed 's/.*\/\([0-9x]*\).*/\1/'
+}
+
+vsp1_has_control() {
+	subdev=$(vsp1_entity_subdev $1)
+	control_name=$(echo $2 | tr '+' ' ')
+
+	$yavta --no-query -l $subdev | grep -q -- "$control_name"
 }
 
 # -----------------------------------------------------------------------------
@@ -472,9 +497,11 @@ test_init() {
 	best_features_count=0
 
 	for mdev in /dev/media* ; do
+		dev=$(vsp1_device $mdev)
+
 		match='true'
 		for feature in $features ; do
-			$(vsp1_has_feature $feature) || {
+			$(vsp1_has_feature "$feature") || {
 				match='false';
 				break;
 			}
@@ -491,7 +518,7 @@ test_init() {
 
 		features_count=0
 		for feature in $optional_features ; do
-			$(vsp1_has_feature $feature) && {
+			$(vsp1_has_feature "$feature") && {
 				features_count=$((features_count+1))
 				match='false';
 				break;
@@ -510,7 +537,7 @@ test_init() {
 	fi
 
 	mdev=$best_mdev
-	dev=$(vsp1_device $best_mdev)
+	dev=$(vsp1_device $mdev)
 	echo "Using device $mdev ($dev)" | ./logger.sh config >> $logfile
 
 	vsp_runner=./vsp-runner.sh
