@@ -44,8 +44,9 @@ system in a directory included in $PATH.
 * raw2rgbpnm (available at git://git.retiisi.org.uk/~sailus/raw2rgbpnm.git)
 * yavta (available at git://git.ideasonboard.org/yavta.git)
 
-All but the HGO test can be run with the latest version of these tools. To
-test the HGO, the 'metadata' branch of 'yavta' is currently needed.
+All but the HGO and CLU/LUT tests can be run with the latest version of these
+tools. To test the HGO and CLU/LUT, the 'vsp' branch of 'yavta' is currently
+needed.
 
 
 -----------------
