@@ -460,9 +460,12 @@ format_configure() {
 test_init() {
 	logfile=${1/sh/log}
 	features=$2
+	optional_features=$3
 
 	rm -f $logfile
 	rm -f *.bin
+
+	best_features_count=0
 
 	for mdev in /dev/media* ; do
 		match='true'
@@ -473,17 +476,37 @@ test_init() {
 			}
 		done
 
-		if [ $match == 'true' ] ; then
+		if [ $match == 'false' ] ; then
+			continue
+		fi
+
+		if [ -z "$optional_features" ] ; then
+			best_mdev=$mdev
 			break
+		fi
+
+		features_count=0
+		for feature in $optional_features ; do
+			$(vsp1_has_feature $feature) && {
+				features_count=$((features_count+1))
+				match='false';
+				break;
+			}
+		done
+
+		if [ $features_count -ge $best_features_count ] ; then
+			best_mdev=$mdev
+			best_features_count=$features_count
 		fi
 	done
 
-	if [ $match == 'false' ] ; then
+	if [ -z $best_mdev ] ; then
 		echo "No device found with feature set $features" | ./logger.sh config >> $logfile
 		exit 1
 	fi
 
-	dev=$(vsp1_device $mdev)
+	mdev=$best_mdev
+	dev=$(vsp1_device $best_mdev)
 	echo "Using device $mdev ($dev)" | ./logger.sh config >> $logfile
 
 	vsp_runner=./vsp-runner.sh
