@@ -68,6 +68,18 @@ vsp1_has_control() {
 	$yavta --no-query -l $subdev | grep -q -- "$control_name"
 }
 
+vsp1_set_control() {
+	entity=$1
+	control_name=$(echo $2 | tr '+' ' ')
+	value=$3
+
+	subdev=$(vsp1_entity_subdev $entity)
+	control=$($yavta --no-query -l $subdev | grep -- "$control_name" | cut -d ' ' -f 2)
+
+	echo "Setting control $control_name ($control) to $value" | ./logger.sh "$entity" >> $logfile
+	$yavta --no-query -w "$control $value" $subdev | ./logger.sh "$entity" >> $logfile
+}
+
 # -----------------------------------------------------------------------------
 # Referance frame generation
 #
