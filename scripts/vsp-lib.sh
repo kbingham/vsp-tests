@@ -72,17 +72,17 @@ compare_frame_fuzzy() {
 	img_a=$3
 	img_b=$4
 
-	png_a=${img_a/bin/png}
-	png_b=${img_b/bin/png}
+	pnm_a=${img_a/bin/pnm}
+	pnm_b=${img_b/bin/pnm}
 
-	raw2rgbpnm -f $fmt -s $size $img_a $png_a > /dev/null
-	raw2rgbpnm -f $fmt -s $size $img_b $png_b > /dev/null
+	raw2rgbpnm -f $fmt -s $size $img_a $pnm_a > /dev/null
+	raw2rgbpnm -f $fmt -s $size $img_b $pnm_b > /dev/null
 
-	ae=$(compare -metric ae $png_a $png_b /dev/null 2>&1)
-	mae=$(compare -metric mae $png_a $png_b /dev/null 2>&1 | sed 's/.*(\(.*\))/\1/')
+	ae=$(compare -metric ae $pnm_a $pnm_b /dev/null 2>&1)
+	mae=$(compare -metric mae $pnm_a $pnm_b /dev/null 2>&1 | sed 's/.*(\(.*\))/\1/')
 
-	rm $png_a
-	rm $png_b
+	rm $pnm_a
+	rm $pnm_b
 
 	width=$(echo $size | cut -d 'x' -f 1)
 	height=$(echo $size | cut -d 'x' -f 2)
@@ -135,6 +135,8 @@ compare_frames() {
 			result="fail"
 		}
 	done
+
+	rm -f frames/$reference
 
 	echo $result
 }

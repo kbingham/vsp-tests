@@ -1,4 +1,4 @@
-SUBDIRS=data scripts tests
+SUBDIRS=data scripts src tests
 
 recursive=all clean install
 
