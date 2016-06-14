@@ -4,33 +4,41 @@ set -e
 
 source vsp-lib.sh
 
+genimage='./gen-image'
 mediactl='media-ctl'
 yavta='yavta'
 
-# ------------------------------------------------------------------------------
-# Format retrieval
+# -----------------------------------------------------------------------------
+# Input frame generation
 #
 
-frame_reference() {
-	format=$1
-	size=$2
+generate_input_frame() {
+	local file=$1
+	local format=$2
+	local size=$3
 
-	lcfmt=`echo $infmt | tr '[:upper:]' '[:lower:]'`
+	local alpha=
+	local options=
 
 	case $format in
 	ARGB555)
-		echo "frames/frame-reference-$lcfmt-$size-alpha255.bin"
+		alpha=255
 		;;
 	ABGR32 | ARGB32)
-		echo "frames/frame-reference-$lcfmt-$size-alpha200.bin"
+		alpha=200
 		;;
 	XRGB555 | XBGR32 | XRGB32)
-		echo "frames/frame-reference-$lcfmt-$size-alpha0.bin"
+		alpha=0
 		;;
 	*)
-		echo "frames/frame-reference-$lcfmt-$size.bin"
+		alpha=255
 		;;
 	esac
+
+	$(format_v4l2_is_yuv $format) && options="$options -y"
+
+	$genimage -f $format -s $size -a $alpha $options -o $file \
+		frames/frame-reference-1024x768.pnm
 }
 
 # ------------------------------------------------------------------------------
@@ -105,8 +113,9 @@ execute() {
 	input)
 		rpf=rpf.$index
 		size=$(vsp1_entity_get_size $rpf 0)
+		file=${rpf}.bin
 
-		file=$(frame_reference $infmt $size)
+		generate_input_frame $file $infmt $size
 
 		if [ "x$options" = xinfinite ] ; then
 			$yavta -c -n 4 -f $infmt -s $size --file=$file $options \
@@ -115,6 +124,8 @@ execute() {
 			$yavta -c10 -n 4 -f $infmt -s $size --file=$file $options \
 				`$mediactl -d $mdev -e "$dev $rpf input"`
 		fi
+
+		rm -f $file
 		;;
 
 	output)

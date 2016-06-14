@@ -14,10 +14,10 @@ Building
 --------
 
 The vsp-tests suite requires the following tools to be installed on the host
-to generate the test script and test data.
+to generate the test scripts and applications
 
+* gcc
 * make
-* python
 
 After installing the needed packages, you can build the test suite by running
 
@@ -27,9 +27,8 @@ in the vsp-tests root directory. Then, to install the test suite, run
 
 	make install INSTALL_DIR=/path/to/target/directory
 
-This will copy the test scripts and data to the target directory to be copied
-or exported to the host. As test data take more than 200MB of disk space usage
-of nfsroot is recommended to run the tests.
+This will copy the test scripts and applications to the target directory to be
+copied or exported to the host.
 
 
 --------------------

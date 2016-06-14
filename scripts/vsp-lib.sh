@@ -1,5 +1,6 @@
 #!/bin/sh
 
+genimage='./gen-image'
 mediactl='media-ctl'
 yavta='yavta'
 
@@ -36,6 +37,65 @@ vsp1_entity_get_size() {
 
 	$mediactl -d $mdev --get-v4l2 "'$dev $entity':$pad" | grep fmt | \
 	      sed 's/.*\/\([0-9x]*\).*/\1/'
+}
+
+# -----------------------------------------------------------------------------
+# Referance frame generation
+#
+
+reference_frame() {
+	local file=$1
+	local reftype=$2
+	local format=$3
+	local size=$4
+
+	local alpha=
+	local options=
+
+	case $reftype in
+	reference | scaled)
+		;;
+	composed-*)
+		options="$options -c ${reftype/composed-/}"
+		;;
+	esac
+
+	case $format in
+	ARGB555)
+		alpha=255
+		;;
+	ABGR32 | ARGB32)
+		alpha=200
+		;;
+	XRGB555)
+		# XRGB555 has the X bit hardcoded to 0
+		alpha=0
+		;;
+	XBGR32 | XRGB32)
+		# The X bits are configurable with a default value of 255
+		alpha=255
+		;;
+	*)
+		alpha=255
+		;;
+	esac
+
+	$(format_v4l2_is_yuv $format) && options="$options -y"
+
+	$genimage -f $format -s $size -a $alpha $options -o $file \
+		frames/frame-reference-1024x768.pnm
+}
+
+reference_histogram() {
+	local file=$1
+	local format=$2
+	local size=$3
+
+	local yuv=
+	$(format_v4l2_is_yuv $format) && yuv="-y"
+
+	$genimage -f $format $yuv -s $size -H $file \
+		frames/frame-reference-1024x768.pnm
 }
 
 # ------------------------------------------------------------------------------
@@ -108,35 +168,21 @@ compare_frames() {
 	fmt=$(echo $format | tr '[:upper:]' '[:lower:]')
 	size=$(vsp1_entity_get_size wpf.$wpf 1)
 
-	case $format in
-	ARGB555)
-		reference="frame-$reftype-$fmt-$size-alpha255.bin"
-		;;
-	ABGR32 | ARGB32)
-		reference="frame-$reftype-$fmt-$size-alpha200.bin"
-		;;
-	XRGB555)
-		# XRGB555 has the X bit hardcoded to 0
-		reference="frame-$reftype-$fmt-$size-alpha0.bin"
-		;;
-	XBGR32 | XRGB32)
-		# The X bits are configurable with a default value of 255
-		reference="frame-$reftype-$fmt-$size-alpha255.bin"
-		;;
-	*)
-		reference="frame-$reftype-$fmt-$size.bin"
-		;;
-	esac
+	reference_frame ref-frame.bin $reftype $format $size
 
 	result="pass"
 	for frame in frame-*.bin ; do
-		(compare_frame_$method $format $size $frame frames/$reference) || {
-			mv $frame ${0/.sh/}-${frame/.bin/-$reftype-$fmt-$size.bin} ;
+		(compare_frame_$method $format $size $frame ref-frame.bin) || {
+			mv $frame ${0/.sh/}-${frame/.bin/-$fmt-$size.bin} ;
 			result="fail"
 		}
 	done
 
-	rm -f frames/$reference
+	if [ $result = "fail" ] ; then
+		mv ref-frame.bin ${0/.sh/}-ref-frame-$fmt-$size.bin
+	else
+		rm -f ref-frame.bin
+	fi
 
 	echo $result
 }
@@ -163,15 +209,22 @@ compare_histograms() {
 
 	fmt=$(echo $format | tr '[:upper:]' '[:lower:]')
 	size=$(vsp1_entity_get_size wpf.$wpf 1)
-	reference="histo-reference-$fmt-$size.bin"
+
+	reference_histogram ref-histogram.bin $format $size
 
 	result="pass"
 	for histo in histo-*.bin ; do
-		(compare_histogram $histo frames/$reference) || {
+		(compare_histogram $histo ref-histogram.bin) || {
 			mv $histo ${0/.sh/}-${histo/.bin/-$fmt.bin} ;
 			result="fail"
 		}
 	done
+
+	if [ $result = "fail" ] ; then
+		mv ref-histogram.bin ${0/.sh/}-ref-histogram-$fmt.bin
+	else
+		rm -f ref-histogram.bin
+	fi
 
 	echo $result
 }
@@ -269,6 +322,11 @@ format_v4l2_to_mbus() {
 \tNV12M, NV16M, NV21M, NV61M, UYVY, VYUY, YUV420M, YUYV, YVYU" >&2
 		exit 1
 	esac
+}
+
+format_v4l2_is_yuv() {
+	local format=$(format_v4l2_to_mbus $1)
+	[ $format = 'AYUV32' ]
 }
 
 format_rpf() {
