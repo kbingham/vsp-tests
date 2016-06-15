@@ -8,7 +8,7 @@
 source vsp-lib.sh
 
 features="bru rpf.0 uds wpf.0"
-formats="RGB24 UYVY"
+formats="RGB24 YUV444M"
 
 test_scale() {
 	format=$1
@@ -30,7 +30,7 @@ test_scale() {
 	$vsp_runner $mdev input 0 $format &
 	$vsp_runner $mdev output 0 $format
 
-	result=$(compare_frames exact)
+	result=$(compare_frames fuzzy)
 
 	test_complete $result
 }
