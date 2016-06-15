@@ -127,7 +127,7 @@ compare_frame_exact() {
 # the whole frame with no more than 5% of the pixels differing.
 #
 compare_frame_fuzzy() {
-	fmt=$(echo $1 | sed 's/M$//')
+	fmt=$(echo $1 | sed 's/M$/P/')
 	size=$2
 	img_a=$3
 	img_b=$4
@@ -310,7 +310,7 @@ format_v4l2_to_mbus() {
 		echo "ARGB32";
 		;;
 
-	NV12M | NV16M | NV21M | NV61M | UYVY | VYUY | YUV420M | YUYV | YVYU)
+	UYVY | VYUY | YUYV | YVYU | NV12M | NV16M | NV21M | NV61M | YUV420M | YUV422M | YUV444M)
 		echo "AYUV32"
 		;;
 
@@ -319,7 +319,9 @@ format_v4l2_to_mbus() {
 		echo -e "Valid formats are
 \tRGB332, ARGB555, XRGB555, RGB565, BGR24, RGB24,
 \tXBGR32, XRGB32, ABGR32, ARGB32,
-\tNV12M, NV16M, NV21M, NV61M, UYVY, VYUY, YUV420M, YUYV, YVYU" >&2
+\tUYVY, VYUY, YUYV, YVYU,
+\tNV12M, NV16M, NV21M, NV61M,
+\tYUV420M, YUV422M, YUV444M" >&2
 		exit 1
 	esac
 }
