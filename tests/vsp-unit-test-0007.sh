@@ -7,7 +7,7 @@
 source vsp-lib.sh
 
 features="rpf.0 rpf.1 bru wpf.0"
-formats="RGB24 UYVY"
+formats="RGB24 YUV444M"
 
 test_bru() {
 	format=$1
@@ -23,7 +23,7 @@ test_bru() {
 	done
 	$vsp_runner $mdev output 0 $format
 
-	result=$(compare_frames fuzzy)
+	result=$(compare_frames exact)
 
 	test_complete $result
 }

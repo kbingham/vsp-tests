@@ -8,7 +8,7 @@
 source vsp-lib.sh
 
 features="hgo rpf.0 wpf.0"
-formats="RGB24 UYVY"
+formats="RGB24 YUV444M"
 
 test_histogram() {
 	test_start "histogram in $format"

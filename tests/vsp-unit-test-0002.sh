@@ -15,12 +15,12 @@ test_wpf_packing() {
 	test_start "WPF packing in $format"
 
 	pipe_configure rpf-wpf 0 0
-	format_configure rpf-wpf 0 0 YUYV 1024x768 $format
+	format_configure rpf-wpf 0 0 YUV444M 1024x768 $format
 
-	$vsp_runner $mdev input 0 YUYV &
+	$vsp_runner $mdev input 0 YUV444M &
 	$vsp_runner $mdev output 0 $format
 
-	result=$(compare_frames fuzzy)
+	result=$(compare_frames exact)
 
 	test_complete $result
 }

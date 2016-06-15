@@ -8,7 +8,7 @@
 source vsp-lib.sh
 
 features="rpf.0 uds wpf.0"
-formats="RGB24 UYVY"
+formats="RGB24 YUV444M"
 
 test_scale() {
 	format=$1
