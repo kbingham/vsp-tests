@@ -16,7 +16,6 @@ test_histogram() {
 	pipe_configure rpf-hgo
 	format_configure rpf-hgo $format 1024x768
 
-	$vsp_runner $mdev m2m-hgo $format $format
 	$vsp_runner $mdev hgo &
 	$vsp_runner $mdev input 0 $format &
 	$vsp_runner $mdev output 0 $format
