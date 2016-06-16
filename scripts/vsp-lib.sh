@@ -331,9 +331,25 @@ pipe_rpf_bru_uds() {
 	__vsp_wpf_index=0
 }
 
+pipe_rpf_clu() {
+	$mediactl -d $mdev -l "'$dev rpf.0':1 -> '$dev clu':0 [1]"
+	$mediactl -d $mdev -l "'$dev clu':1 -> '$dev wpf.0':0 [1]"
+	$mediactl -d $mdev -l "'$dev wpf.0':1 -> '$dev wpf.0 output':0 [1]"
+
+	__vsp_wpf_index=0
+}
+
 pipe_rpf_hgo() {
 	$mediactl -d $mdev -l "'$dev rpf.0':1 -> '$dev wpf.0':0 [1]"
 	$mediactl -d $mdev -l "'$dev rpf.0':1 -> '$dev hgo':0 [1]"
+	$mediactl -d $mdev -l "'$dev wpf.0':1 -> '$dev wpf.0 output':0 [1]"
+
+	__vsp_wpf_index=0
+}
+
+pipe_rpf_lut() {
+	$mediactl -d $mdev -l "'$dev rpf.0':1 -> '$dev lut':0 [1]"
+	$mediactl -d $mdev -l "'$dev lut':1 -> '$dev wpf.0':0 [1]"
 	$mediactl -d $mdev -l "'$dev wpf.0':1 -> '$dev wpf.0 output':0 [1]"
 
 	__vsp_wpf_index=0
@@ -465,6 +481,19 @@ format_rpf_bru_uds() {
 	__vsp_wpf_format=$3
 }
 
+format_rpf_clu() {
+	local format=$(format_v4l2_to_mbus $1)
+	local size=$2
+
+	$mediactl -d $mdev -V "'$dev rpf.0':0 [fmt:$format/$size]"
+	$mediactl -d $mdev -V "'$dev clu':0 [fmt:$format/$size]"
+	$mediactl -d $mdev -V "'$dev clu':1 [fmt:$format/$size]"
+	$mediactl -d $mdev -V "'$dev wpf.0':0 [fmt:$format/$size]"
+	$mediactl -d $mdev -V "'$dev wpf.0':1 [fmt:$format/$size]"
+
+	__vsp_wpf_format=$1
+}
+
 format_rpf_hgo() {
 	local format=$(format_v4l2_to_mbus $1)
 	local size=$2
@@ -475,6 +504,19 @@ format_rpf_hgo() {
 	$mediactl -d $mdev -V "'$dev wpf.0':0 [fmt:$format/$size]"
 	$mediactl -d $mdev -V "'$dev wpf.0':1 [fmt:$format/$size]"
 	$mediactl -d $mdev -V "'$dev hgo':0   [fmt:$format/$size $crop $compose]"
+
+	__vsp_wpf_format=$1
+}
+
+format_rpf_lut() {
+	local format=$(format_v4l2_to_mbus $1)
+	local size=$2
+
+	$mediactl -d $mdev -V "'$dev rpf.0':0 [fmt:$format/$size]"
+	$mediactl -d $mdev -V "'$dev lut':0 [fmt:$format/$size]"
+	$mediactl -d $mdev -V "'$dev lut':1 [fmt:$format/$size]"
+	$mediactl -d $mdev -V "'$dev wpf.0':0 [fmt:$format/$size]"
+	$mediactl -d $mdev -V "'$dev wpf.0':1 [fmt:$format/$size]"
 
 	__vsp_wpf_format=$1
 }
