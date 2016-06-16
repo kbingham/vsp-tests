@@ -61,31 +61,26 @@ parse() {
 	fi
 
 	mdev=$1
-	dev=`$mediactl -d $mdev -p | grep 'bus info' | sed 's/.*platform://'`
-
-	if [ -z $dev ] ; then
-		echo "Error: Device $dev doesn't exist"
-		syntax
-		return 1
-	fi
-
 	cmd=$2
 
 	case $cmd in
 	hgo)
 		options=$3
+		log=hgo
 		;;
 
 	input)
 		index=$3
 		infmt=$4
 		options=$5
+		log=input.$index
 		;;
 
 	output)
 		index=$3
 		outfmt=$4
 		options=$5
+		log=output.$index
 		;;
 
 	*)
@@ -99,6 +94,14 @@ parse() {
 #
 
 execute() {
+	dev=`$mediactl -d $mdev -p | grep 'bus info' | sed 's/.*platform://'`
+
+	if [ -z $dev ] ; then
+		echo "Error: Device $dev doesn't exist"
+		syntax
+		return 1
+	fi
+
 	case $cmd in
 	hgo)
 		if [ "x$options" = xinfinite ] ; then
@@ -142,4 +145,5 @@ execute() {
 	esac
 }
 
-parse $* && execute
+parse $* || exit 1
+execute | ./logger.sh $log >> $logfile

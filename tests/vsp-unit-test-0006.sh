@@ -12,11 +12,10 @@ format=RGB24
 test_no_rpf() {
 	test_start "invalid pipeline with no RPF"
 
-	pipe_configure none | ./logger.sh config >> $logfile
-	format_configure wpf \
-		$format 1024x768 0 | ./logger.sh config >> $logfile
+	pipe_configure none
+	format_configure wpf $format 1024x768 0
 
-	$vsp_runner $mdev output 0 $format | ./logger.sh input.0 >> $logfile
+	$vsp_runner $mdev output 0 $format
 
 	# The test always passes if the kernel doesn't crash
 	test_complete pass
@@ -25,17 +24,16 @@ test_no_rpf() {
 test_no_wpf() {
 	test_start "invalid pipeline with no WPF"
 
-	pipe_configure none | ./logger.sh config >> $logfile
-	format_configure rpf \
-		$format 1024x768 0 | ./logger.sh config >> $logfile
+	pipe_configure none
+	format_configure rpf $format 1024x768 0
 
-	$vsp_runner $mdev input 0 $format | ./logger.sh input.0 >> $logfile
+	$vsp_runner $mdev input 0 $format
 
 	# The test always passes if the kernel doesn't crash
 	test_complete pass
 }
 
-test_run() {
+test_main() {
 	test_no_rpf
 	test_no_wpf
 }

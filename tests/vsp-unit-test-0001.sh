@@ -14,19 +14,18 @@ formats="RGB332 ARGB555 XRGB555 RGB565 BGR24 RGB24 ABGR32 ARGB32 XBGR32 XRGB32"
 test_wpf_packing() {
 	test_start "WPF packing in $format"
 
-	pipe_configure rpf-wpf 0 0 | ./logger.sh config >> $logfile
-	format_configure rpf-wpf 0 0 \
-		ARGB32 1024x768 $format | ./logger.sh config >> $logfile
+	pipe_configure rpf-wpf 0 0
+	format_configure rpf-wpf 0 0 ARGB32 1024x768 $format
 
-	$vsp_runner $mdev input 0 ARGB32 | ./logger.sh input.0 >> $logfile &
-	$vsp_runner $mdev output 0 $format | ./logger.sh output.0 >> $logfile
+	$vsp_runner $mdev input 0 ARGB32 &
+	$vsp_runner $mdev output 0 $format
 
 	result=$(compare_frames exact reference $format 0)
 
 	test_complete $result
 }
 
-test_run() {
+test_main() {
 	for format in $formats ; do
 		test_wpf_packing $format
 	done

@@ -14,19 +14,18 @@ formats="NV12M NV16M NV21M NV61M UYVY VYUY YUV420M YUYV YVYU"
 test_wpf_packing() {
 	test_start "WPF packing in $format"
 
-	pipe_configure rpf-wpf 0 0 | ./logger.sh config >> $logfile
-	format_configure rpf-wpf 0 0 \
-		YUYV 1024x768 $format | ./logger.sh config >> $logfile
+	pipe_configure rpf-wpf 0 0
+	format_configure rpf-wpf 0 0 YUYV 1024x768 $format
 
-	$vsp_runner $mdev input 0 YUYV | ./logger.sh input.0 >> $logfile &
-	$vsp_runner $mdev output 0 $format | ./logger.sh output.0 >> $logfile
+	$vsp_runner $mdev input 0 YUYV &
+	$vsp_runner $mdev output 0 $format
 
 	result=$(compare_frames fuzzy reference $format 0)
 
 	test_complete $result
 }
 
-test_run() {
+test_main() {
 	for format in $formats ; do
 		test_wpf_packing $format
 	done

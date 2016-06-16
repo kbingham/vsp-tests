@@ -500,7 +500,7 @@ format_configure() {
 #
 
 test_init() {
-	logfile=${1/sh/log}
+	export logfile=${1/sh/log}
 	local features=$2
 	local optional_features=$3
 
@@ -568,4 +568,8 @@ test_complete() {
 
 	rm -f frame-*.bin
 	rm -f histo-*.bin
+}
+
+test_run() {
+	test_main | ./logger.sh error >> $logfile
 }

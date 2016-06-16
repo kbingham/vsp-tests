@@ -13,21 +13,20 @@ formats="RGB24 UYVY"
 test_histogram() {
 	test_start "histogram in $format"
 
-	pipe_configure rpf-hgo                    | ./logger.sh config >> $logfile
-	format_configure rpf-hgo \
-		$format 1024x768                  | ./logger.sh config >> $logfile
+	pipe_configure rpf-hgo
+	format_configure rpf-hgo $format 1024x768
 
-	$vsp_runner $mdev m2m-hgo $format $format | ./logger.sh config >> $logfile
-	$vsp_runner $mdev hgo                     | ./logger.sh hgo >> $logfile &
-	$vsp_runner $mdev input 0 $format         | ./logger.sh input.0 >> $logfile &
-	$vsp_runner $mdev output 0 $format        | ./logger.sh output.0 >> $logfile
+	$vsp_runner $mdev m2m-hgo $format $format
+	$vsp_runner $mdev hgo &
+	$vsp_runner $mdev input 0 $format &
+	$vsp_runner $mdev output 0 $format
 
 	result=$(compare_histograms $format 0)
 
 	test_complete $result
 }
 
-test_run() {
+test_main() {
 	for format in $formats ; do
 		test_histogram $format
 	done

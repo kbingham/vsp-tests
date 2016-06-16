@@ -24,19 +24,18 @@ test_scale() {
 
 	test_start "scaling from $insize to $outsize in $format $order BRU"
 
-	pipe_configure $pipe | ./logger.sh config >> $logfile
-	format_configure $pipe \
-		$format $insize $format $outsize | ./logger.sh config >> $logfile
+	pipe_configure $pipe
+	format_configure $pipe $format $insize $format $outsize
 
-	$vsp_runner $mdev input 0 $format  | ./logger.sh input.0  >> $logfile &
-	$vsp_runner $mdev output 0 $format | ./logger.sh output.0 >> $logfile
+	$vsp_runner $mdev input 0 $format &
+	$vsp_runner $mdev output 0 $format
 
 	result=$(compare_frames exact scaled $format 0)
 
 	test_complete $result
 }
 
-test_run() {
+test_main() {
 	for format in $formats ; do
 		test_scale $format 1024x768 640x480 before
 		test_scale $format 640x480 1024x768 before

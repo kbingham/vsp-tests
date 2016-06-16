@@ -15,12 +15,11 @@ test_rpf() {
 
 	test_start "RPF.$rpf"
 
-	pipe_configure rpf-wpf $rpf 0 | ./logger.sh config >> $logfile
-	format_configure rpf-wpf $rpf 0 \
-		$format 1024x768 $format | ./logger.sh config >> $logfile
+	pipe_configure rpf-wpf $rpf 0
+	format_configure rpf-wpf $rpf 0 $format 1024x768 $format
 
-	$vsp_runner $mdev input $rpf $format | ./logger.sh input.0 >> $logfile &
-	$vsp_runner $mdev output 0 $format | ./logger.sh output.0 >> $logfile
+	$vsp_runner $mdev input $rpf $format &
+	$vsp_runner $mdev output 0 $format
 
 	result=$(compare_frames exact reference $format 0)
 
@@ -32,19 +31,18 @@ test_wpf() {
 
 	test_start "WPF.$wpf"
 
-	pipe_configure rpf-wpf 0 $wpf | ./logger.sh config >> $logfile
-	format_configure rpf-wpf 0 $wpf \
-		$format 1024x768 $format | ./logger.sh config >> $logfile
+	pipe_configure rpf-wpf 0 $wpf
+	format_configure rpf-wpf 0 $wpf $format 1024x768 $format
 
-	$vsp_runner $mdev input 0 $format | ./logger.sh input.0 >> $logfile &
-	$vsp_runner $mdev output $wpf $format | ./logger.sh output.0 >> $logfile
+	$vsp_runner $mdev input 0 $format &
+	$vsp_runner $mdev output $wpf $format
 
 	result=$(compare_frames exact reference $format $wpf)
 
 	test_complete $result
 }
 
-test_run() {
+test_main() {
 	num_rpfs=$(vsp1_count_rpfs)
 	num_wpfs=$(vsp1_count_wpfs)
 
