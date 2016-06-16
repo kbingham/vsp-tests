@@ -13,17 +13,17 @@ vsp1_device() {
 }
 
 vsp1_has_feature() {
-	feature=$1
-	entity_name=$(echo $feature | sed 's/\[.*//')
+	local feature=$1
+	local entity_name=$(echo $feature | sed 's/\[.*//')
 
 	($mediactl -d $mdev -p | grep -q -- "- entity.*$entity_name") || return
 
-	option=$(echo $feature | cut -d '[' -f 2 -s | cut -d ']' -f 1)
+	local option=$(echo $feature | cut -d '[' -f 2 -s | cut -d ']' -f 1)
 
 	[ -z $option ] && return
 
-	key=$(echo $option | sed 's/:.*//')
-	value=$(echo $option | sed "s/.*:'\(.*\)'/\1/")
+	local key=$(echo $option | sed 's/:.*//')
+	local value=$(echo $option | sed "s/.*:'\(.*\)'/\1/")
 
 	case $key in
 	control)
@@ -45,7 +45,7 @@ vsp1_count_wpfs() {
 }
 
 vsp1_count_bru_inputs() {
-	num_pads=`media-ctl -p | grep 'entity.*bru' | sed 's/.*(\([0-9]\) pads.*/\1/'`
+	local num_pads=`media-ctl -p | grep 'entity.*bru' | sed 's/.*(\([0-9]\) pads.*/\1/'`
 	echo $((num_pads-1))
 }
 
@@ -54,27 +54,27 @@ vsp1_entity_subdev() {
 }
 
 vsp1_entity_get_size() {
-	entity=$1
-	pad=$2
+	local entity=$1
+	local pad=$2
 
 	$mediactl -d $mdev --get-v4l2 "'$dev $entity':$pad" | grep fmt | \
 	      sed 's/.*\/\([0-9x]*\).*/\1/'
 }
 
 vsp1_has_control() {
-	subdev=$(vsp1_entity_subdev $1)
-	control_name=$(echo $2 | tr '+' ' ')
+	local subdev=$(vsp1_entity_subdev $1)
+	local control_name=$(echo $2 | tr '+' ' ')
 
 	$yavta --no-query -l $subdev | grep -q -- "$control_name"
 }
 
 vsp1_set_control() {
-	entity=$1
-	control_name=$(echo $2 | tr '+' ' ')
-	value=$3
+	local entity=$1
+	local control_name=$(echo $2 | tr '+' ' ')
+	local value=$3
 
-	subdev=$(vsp1_entity_subdev $entity)
-	control=$($yavta --no-query -l $subdev | grep -- "$control_name" | cut -d ' ' -f 2)
+	local subdev=$(vsp1_entity_subdev $entity)
+	local control=$($yavta --no-query -l $subdev | grep -- "$control_name" | cut -d ' ' -f 2)
 
 	echo "Setting control $control_name ($control) to $value" | ./logger.sh "$entity" >> $logfile
 	$yavta --no-query -w "$control $value" $subdev | ./logger.sh "$entity" >> $logfile
@@ -147,10 +147,10 @@ reference_histogram() {
 # Compare the two frames for exact match.
 #
 compare_frame_exact() {
-	img_a=$3
-	img_b=$4
+	local img_a=$3
+	local img_b=$4
 
-	match='fail'
+	local match='fail'
 	diff -q $img_a $img_b > /dev/null && match='pass'
 
 	echo "Compared $img_a and $img_b: $match" | ./logger.sh check >> $logfile
@@ -168,28 +168,28 @@ compare_frame_exact() {
 # the whole frame with no more than 5% of the pixels differing.
 #
 compare_frame_fuzzy() {
-	fmt=$(echo $1 | sed 's/M$/P/')
-	size=$2
-	img_a=$3
-	img_b=$4
+	local fmt=$(echo $1 | sed 's/M$/P/')
+	local size=$2
+	local img_a=$3
+	local img_b=$4
 
-	pnm_a=${img_a/bin/pnm}
-	pnm_b=${img_b/bin/pnm}
+	local pnm_a=${img_a/bin/pnm}
+	local pnm_b=${img_b/bin/pnm}
 
 	raw2rgbpnm -f $fmt -s $size $img_a $pnm_a > /dev/null
 	raw2rgbpnm -f $fmt -s $size $img_b $pnm_b > /dev/null
 
-	ae=$(compare -metric ae $pnm_a $pnm_b /dev/null 2>&1)
-	mae=$(compare -metric mae $pnm_a $pnm_b /dev/null 2>&1 | sed 's/.*(\(.*\))/\1/')
+	local ae=$(compare -metric ae $pnm_a $pnm_b /dev/null 2>&1)
+	local mae=$(compare -metric mae $pnm_a $pnm_b /dev/null 2>&1 | sed 's/.*(\(.*\))/\1/')
 
 	rm $pnm_a
 	rm $pnm_b
 
-	width=$(echo $size | cut -d 'x' -f 1)
-	height=$(echo $size | cut -d 'x' -f 2)
+	local width=$(echo $size | cut -d 'x' -f 1)
+	local height=$(echo $size | cut -d 'x' -f 2)
 
-	ae_match=$(echo $ae $width $height | awk '{ if ($1 / $2 / $3 < 0.05) { print "pass" } else { print "fail" } }')
-	mae_match=$(echo $mae | awk '{ if ($1 < 0.01) { print "pass" } else { print "fail" } }')
+	local ae_match=$(echo $ae $width $height | awk '{ if ($1 / $2 / $3 < 0.05) { print "pass" } else { print "fail" } }')
+	local mae_match=$(echo $mae | awk '{ if ($1 < 0.01) { print "pass" } else { print "fail" } }')
 
 	echo "Compared $img_a and $img_b: ae $ae ($ae_match) mae $mae ($mae_match)" | ./logger.sh check >> $logfile
 
@@ -201,17 +201,17 @@ compare_frame_fuzzy() {
 }
 
 compare_frames() {
-	method=$1
-	reftype=$2
-	format=$3
-	wpf=$4
+	local method=$1
+	local reftype=$2
+	local format=$3
+	local wpf=$4
 
-	fmt=$(echo $format | tr '[:upper:]' '[:lower:]')
-	size=$(vsp1_entity_get_size wpf.$wpf 1)
+	local fmt=$(echo $format | tr '[:upper:]' '[:lower:]')
+	local size=$(vsp1_entity_get_size wpf.$wpf 1)
 
 	reference_frame ref-frame.bin $reftype $format $size
 
-	result="pass"
+	local result="pass"
 	for frame in frame-*.bin ; do
 		(compare_frame_$method $format $size $frame ref-frame.bin) || {
 			mv $frame ${0/.sh/}-${frame/.bin/-$fmt-$size.bin} ;
@@ -229,10 +229,10 @@ compare_frames() {
 }
 
 compare_histogram() {
-	histo_a=$1
-	histo_b=$2
+	local histo_a=$1
+	local histo_b=$2
 
-	match='fail'
+	local match='fail'
 	diff -q $histo_a $histo_b > /dev/null && match='pass'
 
 	echo "Compared $histo_a and $histo_b: $match" | ./logger.sh check >> $logfile
@@ -245,15 +245,15 @@ compare_histogram() {
 }
 
 compare_histograms() {
-	format=$1
-	wpf=$2
+	local format=$1
+	local wpf=$2
 
-	fmt=$(echo $format | tr '[:upper:]' '[:lower:]')
-	size=$(vsp1_entity_get_size wpf.$wpf 1)
+	local fmt=$(echo $format | tr '[:upper:]' '[:lower:]')
+	local size=$(vsp1_entity_get_size wpf.$wpf 1)
 
 	reference_histogram ref-histogram.bin $format $size
 
-	result="pass"
+	local result="pass"
 	for histo in histo-*.bin ; do
 		(compare_histogram $histo ref-histogram.bin) || {
 			mv $histo ${0/.sh/}-${histo/.bin/-$fmt.bin} ;
@@ -280,9 +280,9 @@ pipe_none() {
 }
 
 pipe_rpf_bru() {
-	ninputs=$1
+	local ninputs=$1
 
-	bru_output=$(vsp1_count_bru_inputs)
+	local bru_output=$(vsp1_count_bru_inputs)
 
 	for input in `seq 0 1 $((ninputs-1))` ; do
 		$mediactl -d $mdev -l "'$dev rpf.$input':1 -> '$dev bru':$input [1]"
@@ -292,7 +292,7 @@ pipe_rpf_bru() {
 }
 
 pipe_rpf_bru_uds() {
-	bru_output=$(vsp1_count_bru_inputs)
+	local bru_output=$(vsp1_count_bru_inputs)
 
 	$mediactl -d $mdev -l "'$dev rpf.0':1 -> '$dev bru':0 [1]"
 	$mediactl -d $mdev -l "'$dev bru':$bru_output -> '$dev uds.0':0 [1]"
@@ -313,7 +313,7 @@ pipe_rpf_uds() {
 }
 
 pipe_rpf_uds_bru() {
-	bru_output=$(vsp1_count_bru_inputs)
+	local bru_output=$(vsp1_count_bru_inputs)
 
 	$mediactl -d $mdev -l "'$dev rpf.0':1 -> '$dev uds.0':0 [1]"
 	$mediactl -d $mdev -l "'$dev uds.0':1 -> '$dev bru':0 [1]"
@@ -322,8 +322,8 @@ pipe_rpf_uds_bru() {
 }
 
 pipe_rpf_wpf() {
-	rpf=$1
-	wpf=$2
+	local rpf=$1
+	local wpf=$2
 
 	$mediactl -d $mdev -l "'$dev rpf.$rpf':1 -> '$dev wpf.$wpf':0 [1]"
 	$mediactl -d $mdev -l "'$dev wpf.$wpf':1 -> '$dev wpf.$wpf output':0 [1]"
@@ -334,7 +334,7 @@ pipe_reset() {
 }
 
 pipe_configure() {
-	pipe=${1//-/_}
+	local pipe=${1//-/_}
 	shift 1
 
 	pipe_reset
@@ -373,20 +373,20 @@ format_v4l2_is_yuv() {
 }
 
 format_rpf() {
-	format=$(format_v4l2_to_mbus $1)
-	size=$2
-	rpf=$3
+	local format=$(format_v4l2_to_mbus $1)
+	local size=$2
+	local rpf=$3
 
 	$mediactl -d $mdev -V "'$dev rpf.$rpf':0 [fmt:$format/$size]"
 }
 
 format_rpf_bru() {
-	format=$(format_v4l2_to_mbus $1)
-	size=$2
-	ninputs=$3
-	offset=0
+	local format=$(format_v4l2_to_mbus $1)
+	local size=$2
+	local ninputs=$3
+	local offset=0
 
-	bru_output=$(vsp1_count_bru_inputs)
+	local bru_output=$(vsp1_count_bru_inputs)
 
 	for input in `seq 0 1 $((ninputs-1))` ; do
 		offset=$((offset+50))
@@ -400,12 +400,12 @@ format_rpf_bru() {
 }
 
 format_rpf_bru_uds() {
-	infmt=$(format_v4l2_to_mbus $1)
-	insize=$2
-	outfmt=$(format_v4l2_to_mbus $3)
-	outsize=$4
+	local infmt=$(format_v4l2_to_mbus $1)
+	local insize=$2
+	local outfmt=$(format_v4l2_to_mbus $3)
+	local outsize=$4
 
-	bru_output=$(vsp1_count_bru_inputs)
+	local bru_output=$(vsp1_count_bru_inputs)
 
 	$mediactl -d $mdev -V "'$dev rpf.0':0 [fmt:$infmt/$insize]"
 	$mediactl -d $mdev -V "'$dev bru':0 [fmt:$infmt/$insize]"
@@ -417,10 +417,10 @@ format_rpf_bru_uds() {
 }
 
 format_rpf_hgo() {
-	format=$(format_v4l2_to_mbus $1)
-	size=$2
-	crop=${3:+crop:$3}
-	compose=${4:+compose:$4}
+	local format=$(format_v4l2_to_mbus $1)
+	local size=$2
+	local crop=${3:+crop:$3}
+	local compose=${4:+compose:$4}
 
 	$mediactl -d $mdev -V "'$dev rpf.0':0 [fmt:$format/$size]"
 	$mediactl -d $mdev -V "'$dev wpf.0':0 [fmt:$format/$size]"
@@ -429,10 +429,10 @@ format_rpf_hgo() {
 }
 
 format_rpf_uds() {
-	infmt=$(format_v4l2_to_mbus $1)
-	insize=$2
-	outfmt=$(format_v4l2_to_mbus $3)
-	outsize=$4
+	local infmt=$(format_v4l2_to_mbus $1)
+	local insize=$2
+	local outfmt=$(format_v4l2_to_mbus $3)
+	local outsize=$4
 
 	$mediactl -d $mdev -V "'$dev rpf.0':0 [fmt:$infmt/$insize]"
 	$mediactl -d $mdev -V "'$dev uds.0':0 [fmt:$infmt/$insize]"
@@ -442,12 +442,12 @@ format_rpf_uds() {
 }
 
 format_rpf_uds_bru() {
-	infmt=$(format_v4l2_to_mbus $1)
-	insize=$2
-	outfmt=$(format_v4l2_to_mbus $3)
-	outsize=$4
+	local infmt=$(format_v4l2_to_mbus $1)
+	local insize=$2
+	local outfmt=$(format_v4l2_to_mbus $3)
+	local outsize=$4
 
-	bru_output=$(vsp1_count_bru_inputs)
+	local bru_output=$(vsp1_count_bru_inputs)
 
 	$mediactl -d $mdev -V "'$dev rpf.0':0 [fmt:$infmt/$insize]"
 	$mediactl -d $mdev -V "'$dev uds.0':0 [fmt:$infmt/$insize]"
@@ -459,12 +459,13 @@ format_rpf_uds_bru() {
 }
 
 format_rpf_wpf() {
-	rpf=$1
-	wpf=$2
-	infmt=$(format_v4l2_to_mbus $3)
-	size=$4
-	outfmt=$(format_v4l2_to_mbus $5)
-	crop=$6
+	local rpf=$1
+	local wpf=$2
+	local infmt=$(format_v4l2_to_mbus $3)
+	local size=$4
+	local outfmt=$(format_v4l2_to_mbus $5)
+	local crop=$6
+	local outsize=
 
 	if [ x$crop != 'x' ] ; then
 		crop="crop:$crop"
@@ -479,16 +480,16 @@ format_rpf_wpf() {
 }
 
 format_wpf() {
-	format=$(format_v4l2_to_mbus $1)
-	size=$2
-	wpf=$3
+	local format=$(format_v4l2_to_mbus $1)
+	local size=$2
+	local wpf=$3
 
 	$mediactl -d $mdev -V "'$dev wpf.$wpf':0 [fmt:$format/$size]"
 	$mediactl -d $mdev -V "'$dev wpf.$wpf':1 [fmt:$format/$size]"
 }
 
 format_configure() {
-	pipe=${1//-/_}
+	local pipe=${1//-/_}
 	shift 1
 
 	format_$pipe $*
@@ -500,18 +501,19 @@ format_configure() {
 
 test_init() {
 	logfile=${1/sh/log}
-	features=$2
-	optional_features=$3
+	local features=$2
+	local optional_features=$3
 
 	rm -f $logfile
 	rm -f *.bin
 
-	best_features_count=0
+	local best_features_count=0
+	local best_mdev=
 
 	for mdev in /dev/media* ; do
 		dev=$(vsp1_device $mdev)
 
-		match='true'
+		local match='true'
 		for feature in $features ; do
 			$(vsp1_has_feature "$feature") || {
 				match='false';
@@ -528,7 +530,7 @@ test_init() {
 			break
 		fi
 
-		features_count=0
+		local features_count=0
 		for feature in $optional_features ; do
 			$(vsp1_has_feature "$feature") && {
 				features_count=$((features_count+1))
