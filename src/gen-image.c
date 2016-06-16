@@ -39,6 +39,13 @@
 
 #define clamp(val, low, high)	max(low, min(high, val));
 
+#define swap(a, b)			\
+do {	\
+	typeof(a) __tmp = (a);		\
+	(a) = (b);			\
+	(b) = __tmp;			\
+} while (0)
+
 struct format_color_component {
 	unsigned char length;
 	unsigned char offset;
@@ -99,6 +106,9 @@ struct options {
 	unsigned int output_width;
 
 	bool process_yuv;
+	bool hflip;
+	bool vflip;
+	bool rotate;
 	unsigned int compose;
 	struct params params;
 };
@@ -795,6 +805,62 @@ static void image_compose(const struct image *input, struct image *output,
 }
 
 /* -----------------------------------------------------------------------------
+ * Image rotation and flipping
+ */
+
+static void image_rotate(const struct image *input, struct image *output)
+{
+	const uint8_t *idata = input->data;
+	uint8_t *odata;
+	unsigned int stride = output->width * 3;
+	unsigned int x, y;
+
+	odata = output->data + stride - 3;
+
+	for (y = 0; y < input->height; ++y) {
+		for (x = 0; x < input->width; ++x) {
+			odata[x*stride+0] = *idata++;
+			odata[x*stride+1] = *idata++;
+			odata[x*stride+2] = *idata++;
+		}
+
+		odata -= 3;
+	}
+}
+
+static void image_flip(const struct image *input, struct image *output,
+		       bool hflip, bool vflip)
+{
+	const uint8_t *idata = input->data;
+	uint8_t *odata = output->data;
+	unsigned int stride = output->width * 3;
+	unsigned int x, y;
+	int x_step, y_step;
+
+	if (!hflip) {
+		x_step = 3;
+		y_step = !vflip ? 0 : -2 * stride;
+		odata += !vflip ? 0 : stride * (output->height - 1);
+	} else {
+		x_step = -3;
+		y_step = !vflip ? 2 * stride : 0;
+		odata += !vflip ? stride - 3 : stride * output->height - 3;
+	}
+
+	for (y = 0; y < output->height; ++y) {
+		for (x = 0; x < output->width; ++x) {
+			odata[0] = *idata++;
+			odata[1] = *idata++;
+			odata[2] = *idata++;
+
+			odata += x_step;
+		}
+
+		odata += y_step;
+	}
+}
+
+/* -----------------------------------------------------------------------------
  * Look Up Table
  */
 
@@ -1077,6 +1143,9 @@ static int process(const struct options *options)
 		output_height = input->height;
 	}
 
+	if (options->rotate)
+		swap(output_width, output_height);
+
 	if (input->width != output_width ||
 	    input->height != output_height) {
 		struct image *scaled;
@@ -1141,6 +1210,35 @@ static int process(const struct options *options)
 		ret = histogram(input, options->histo_filename);
 		if (ret)
 			goto done;
+	}
+
+	/* Rotation and flipping */
+	if (options->rotate) {
+		struct image *rotated;
+
+		rotated = image_new(input->format, input->height, input->width);
+		if (!rotated) {
+			ret = -ENOMEM;
+			goto done;
+		}
+
+		image_rotate(input, rotated);
+		image_delete(input);
+		input = rotated;
+	}
+
+	if (options->hflip || options->vflip) {
+		struct image *flipped;
+
+		flipped = image_new(input->format, input->width, input->height);
+		if (!flipped) {
+			ret = -ENOMEM;
+			goto done;
+		}
+
+		image_flip(input, flipped, options->hflip, options->vflip);
+		image_delete(input);
+		input = flipped;
 	}
 
 	/* Format the output */
@@ -1245,14 +1343,17 @@ static void usage(const char *argv0)
 	printf("			Defaults to RGB24 if not specified\n");
 	printf("			Use -f help to list the supported formats\n");
 	printf("-h, --help		Show this help screen\n");
+	printf("    --hflip		Flip the image horizontally\n");
 	printf("-H, --histogram file	Compute histogram on the output image and store it to file\n");
 	printf("-l, --lut file		Apply 1D Look Up Table from file\n");
 	printf("-L, --clu file		Apply 3D Look Up Table from file\n");
 	printf("-o, --output file	Store the output image to file\n");
 	printf("-q, --quantization q	Set the quantization method. Valid values are\n");
 	printf("			limited or full\n");
+	printf("-r, --rotate		Rotate the image clockwise by 90°\n");
 	printf("-s, --size WxH		Set the output image size\n");
 	printf("			Defaults to the input size if not specified\n");
+	printf("    --vflip		Flip the image vertically\n");
 	printf("-y, --yuv		Perform all processing in YUV space\n");
 }
 
@@ -1264,6 +1365,9 @@ static void list_formats(void)
 		printf("%s\n", format_info[i].name);
 }
 
+#define OPT_HFLIP	256
+#define OPT_VFLIP	257
+
 static struct option opts[] = {
 	{"alpha", 1, 0, 'a'},
 	{"clu", 1, 0, 'L'},
@@ -1271,11 +1375,14 @@ static struct option opts[] = {
 	{"encoding", 1, 0, 'e'},
 	{"format", 1, 0, 'f'},
 	{"help", 0, 0, 'h'},
+	{"hflip", 0, 0, OPT_HFLIP},
 	{"histogram", 1, 0, 'H'},
 	{"lut", 1, 0, 'l'},
 	{"output", 1, 0, 'o'},
 	{"quantization", 1, 0, 'q'},
+	{"rotate", 0, 0, 'r'},
 	{"size", 1, 0, 's'},
+	{"vflip", 0, 0, OPT_VFLIP},
 	{"yuv", 0, 0, 'y'},
 	{0, 0, 0, 0}
 };
@@ -1297,7 +1404,7 @@ static int parse_args(struct options *options, int argc, char *argv[])
 	options->params.quantization = V4L2_QUANTIZATION_LIM_RANGE;
 
 	opterr = 0;
-	while ((c = getopt_long(argc, argv, "a:c:e:f:hH:l:L:o:q:s:y", opts, NULL)) != -1) {
+	while ((c = getopt_long(argc, argv, "a:c:e:f:hH:l:L:o:q:rs:y", opts, NULL)) != -1) {
 
 		switch (c) {
 		case 'a': {
@@ -1395,6 +1502,10 @@ static int parse_args(struct options *options, int argc, char *argv[])
 
 			break;
 
+		case 'r':
+			options->rotate = true;
+			break;
+
 		case 's':
 			options->output_width = strtol(optarg, &endptr, 10);
 			if (*endptr != 'x' || endptr == optarg) {
@@ -1411,6 +1522,14 @@ static int parse_args(struct options *options, int argc, char *argv[])
 
 		case 'y':
 			options->process_yuv = true;
+			break;
+
+		case OPT_HFLIP:
+			options->hflip = true;
+			break;
+
+		case OPT_VFLIP:
+			options->vflip = true;
 			break;
 
 		default:
