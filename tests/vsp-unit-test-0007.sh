@@ -23,7 +23,7 @@ test_bru() {
 	done
 	$vsp_runner $mdev output 0 $format
 
-	result=$(compare_frames fuzzy composed-$ninputs $format 0)
+	result=$(compare_frames fuzzy composed-$ninputs)
 
 	test_complete $result
 }

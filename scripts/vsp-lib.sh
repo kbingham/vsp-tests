@@ -203,8 +203,8 @@ compare_frame_fuzzy() {
 compare_frames() {
 	local method=$1
 	local reftype=$2
-	local format=$3
-	local wpf=$4
+	local format=$__vsp_wpf_format
+	local wpf=$__vsp_wpf_index
 
 	local fmt=$(echo $format | tr '[:upper:]' '[:lower:]')
 	local size=$(vsp1_entity_get_size wpf.$wpf 1)
@@ -245,8 +245,8 @@ compare_histogram() {
 }
 
 compare_histograms() {
-	local format=$1
-	local wpf=$2
+	local format=$__vsp_wpf_format
+	local wpf=$__vsp_wpf_index
 
 	local fmt=$(echo $format | tr '[:upper:]' '[:lower:]')
 	local size=$(vsp1_entity_get_size wpf.$wpf 1)
@@ -289,6 +289,8 @@ pipe_rpf_bru() {
 	done
 	$mediactl -d $mdev -l "'$dev bru':$bru_output -> '$dev wpf.0':0 [1]"
 	$mediactl -d $mdev -l "'$dev wpf.0':1 -> '$dev wpf.0 output':0 [1]"
+
+	__vsp_wpf_index=0
 }
 
 pipe_rpf_bru_uds() {
@@ -298,18 +300,24 @@ pipe_rpf_bru_uds() {
 	$mediactl -d $mdev -l "'$dev bru':$bru_output -> '$dev uds.0':0 [1]"
 	$mediactl -d $mdev -l "'$dev uds.0':1 -> '$dev wpf.0':0 [1]"
 	$mediactl -d $mdev -l "'$dev wpf.0':1 -> '$dev wpf.0 output':0 [1]"
+
+	__vsp_wpf_index=0
 }
 
 pipe_rpf_hgo() {
 	$mediactl -d $mdev -l "'$dev rpf.0':1 -> '$dev wpf.0':0 [1]"
 	$mediactl -d $mdev -l "'$dev rpf.0':1 -> '$dev hgo':0 [1]"
 	$mediactl -d $mdev -l "'$dev wpf.0':1 -> '$dev wpf.0 output':0 [1]"
+
+	__vsp_wpf_index=0
 }
 
 pipe_rpf_uds() {
 	$mediactl -d $mdev -l "'$dev rpf.0':1 -> '$dev uds.0':0 [1]"
 	$mediactl -d $mdev -l "'$dev uds.0':1 -> '$dev wpf.0':0 [1]"
 	$mediactl -d $mdev -l "'$dev wpf.0':1 -> '$dev wpf.0 output':0 [1]"
+
+	__vsp_wpf_index=0
 }
 
 pipe_rpf_uds_bru() {
@@ -319,6 +327,8 @@ pipe_rpf_uds_bru() {
 	$mediactl -d $mdev -l "'$dev uds.0':1 -> '$dev bru':0 [1]"
 	$mediactl -d $mdev -l "'$dev bru':$bru_output -> '$dev wpf.0':0 [1]"
 	$mediactl -d $mdev -l "'$dev wpf.0':1 -> '$dev wpf.0 output':0 [1]"
+
+	__vsp_wpf_index=0
 }
 
 pipe_rpf_wpf() {
@@ -327,10 +337,15 @@ pipe_rpf_wpf() {
 
 	$mediactl -d $mdev -l "'$dev rpf.$rpf':1 -> '$dev wpf.$wpf':0 [1]"
 	$mediactl -d $mdev -l "'$dev wpf.$wpf':1 -> '$dev wpf.$wpf output':0 [1]"
+
+	__vsp_wpf_index=$wpf
 }
 
 pipe_reset() {
 	$mediactl -d $mdev -r
+
+	__vsp_wpf_index=
+	__vsp_wpf_format=
 }
 
 pipe_configure() {
@@ -397,6 +412,8 @@ format_rpf_bru() {
 	$mediactl -d $mdev -V "'$dev bru':$bru_output [fmt:$format/$size]"
 	$mediactl -d $mdev -V "'$dev wpf.0':0 [fmt:$format/$size]"
 	$mediactl -d $mdev -V "'$dev wpf.0':1 [fmt:$format/$size]"
+
+	__vsp_wpf_format=$1
 }
 
 format_rpf_bru_uds() {
@@ -414,6 +431,8 @@ format_rpf_bru_uds() {
 	$mediactl -d $mdev -V "'$dev uds.0':1 [fmt:$infmt/$outsize]"
 	$mediactl -d $mdev -V "'$dev wpf.0':0 [fmt:$infmt/$outsize]"
 	$mediactl -d $mdev -V "'$dev wpf.0':1 [fmt:$outfmt/$outsize]"
+
+	__vsp_wpf_format=$3
 }
 
 format_rpf_hgo() {
@@ -426,6 +445,8 @@ format_rpf_hgo() {
 	$mediactl -d $mdev -V "'$dev wpf.0':0 [fmt:$format/$size]"
 	$mediactl -d $mdev -V "'$dev wpf.0':1 [fmt:$format/$size]"
 	$mediactl -d $mdev -V "'$dev hgo':0   [fmt:$format/$size $crop $compose]"
+
+	__vsp_wpf_format=$1
 }
 
 format_rpf_uds() {
@@ -439,6 +460,8 @@ format_rpf_uds() {
 	$mediactl -d $mdev -V "'$dev uds.0':1 [fmt:$infmt/$outsize]"
 	$mediactl -d $mdev -V "'$dev wpf.0':0 [fmt:$infmt/$outsize]"
 	$mediactl -d $mdev -V "'$dev wpf.0':1 [fmt:$outfmt/$outsize]"
+
+	__vsp_wpf_format=$3
 }
 
 format_rpf_uds_bru() {
@@ -456,6 +479,8 @@ format_rpf_uds_bru() {
 	$mediactl -d $mdev -V "'$dev bru':$bru_output [fmt:$infmt/$outsize]"
 	$mediactl -d $mdev -V "'$dev wpf.0':0 [fmt:$infmt/$outsize]"
 	$mediactl -d $mdev -V "'$dev wpf.0':1 [fmt:$outfmt/$outsize]"
+
+	__vsp_wpf_format=$3
 }
 
 format_rpf_wpf() {
@@ -477,6 +502,8 @@ format_rpf_wpf() {
 	$mediactl -d $mdev -V "'$dev rpf.$rpf':0 [fmt:$infmt/$size]"
 	$mediactl -d $mdev -V "'$dev wpf.$wpf':0 [fmt:$infmt/$size $crop]"
 	$mediactl -d $mdev -V "'$dev wpf.$wpf':1 [fmt:$outfmt/$outsize]"
+
+	__vsp_wpf_format=$5
 }
 
 format_wpf() {
@@ -486,6 +513,8 @@ format_wpf() {
 
 	$mediactl -d $mdev -V "'$dev wpf.$wpf':0 [fmt:$format/$size]"
 	$mediactl -d $mdev -V "'$dev wpf.$wpf':1 [fmt:$format/$size]"
+
+	__vsp_wpf_format=$1
 }
 
 format_configure() {

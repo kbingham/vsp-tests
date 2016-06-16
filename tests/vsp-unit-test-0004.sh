@@ -21,7 +21,7 @@ test_histogram() {
 	$vsp_runner $mdev input 0 $format &
 	$vsp_runner $mdev output 0 $format
 
-	result=$(compare_histograms $format 0)
+	result=$(compare_histograms)
 
 	test_complete $result
 }
