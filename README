@@ -14,10 +14,11 @@ Building
 --------
 
 The vsp-tests suite requires the following tools to be installed on the host
-to generate the test scripts and applications
+to generate the test scripts, applications and data.
 
 * gcc
 * make
+* python
 
 After installing the needed packages, you can build the test suite by running
 
