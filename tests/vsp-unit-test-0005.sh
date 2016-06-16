@@ -22,7 +22,7 @@ test_rpf() {
 	$vsp_runner $mdev input $rpf $format &
 	$vsp_runner $mdev output 0 $format
 
-	result=$(compare_frames exact)
+	result=$(compare_frames)
 
 	test_complete $result
 }

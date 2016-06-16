@@ -193,12 +193,16 @@ compare_frame_fuzzy() {
 }
 
 compare_frames() {
-	local method=$1
 	local format=$__vsp_wpf_format
 	local wpf=$__vsp_wpf_index
 
 	local fmt=$(echo $format | tr '[:upper:]' '[:lower:]')
 	local size=$(vsp1_entity_get_size wpf.$wpf 1)
+	local method=exact
+
+	if [ x$__vsp_uds_scale = xtrue ] ; then
+		method=fuzzy
+	fi
 
 	reference_frame ref-frame.bin $format $size
 
@@ -337,6 +341,7 @@ pipe_reset() {
 	$mediactl -d $mdev -r
 
 	__vsp_bru_inputs=
+	__vsp_uds_scale=
 	__vsp_wpf_index=
 	__vsp_wpf_format=
 }
@@ -425,6 +430,7 @@ format_rpf_bru_uds() {
 	$mediactl -d $mdev -V "'$dev wpf.0':0 [fmt:$infmt/$outsize]"
 	$mediactl -d $mdev -V "'$dev wpf.0':1 [fmt:$outfmt/$outsize]"
 
+	[ $insize != $outsize ] && __vsp_uds_scale=true
 	__vsp_wpf_format=$3
 }
 
@@ -454,6 +460,7 @@ format_rpf_uds() {
 	$mediactl -d $mdev -V "'$dev wpf.0':0 [fmt:$infmt/$outsize]"
 	$mediactl -d $mdev -V "'$dev wpf.0':1 [fmt:$outfmt/$outsize]"
 
+	[ $insize != $outsize ] && __vsp_uds_scale=true
 	__vsp_wpf_format=$3
 }
 
@@ -473,6 +480,7 @@ format_rpf_uds_bru() {
 	$mediactl -d $mdev -V "'$dev wpf.0':0 [fmt:$infmt/$outsize]"
 	$mediactl -d $mdev -V "'$dev wpf.0':1 [fmt:$outfmt/$outsize]"
 
+	[ $insize != $outsize ] && __vsp_uds_scale=true
 	__vsp_wpf_format=$3
 }
 

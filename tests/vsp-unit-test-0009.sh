@@ -22,7 +22,7 @@ test_wpf() {
 	$vsp_runner $mdev input 0 $format &
 	$vsp_runner $mdev output $wpf $format
 
-	result=$(compare_frames exact)
+	result=$(compare_frames)
 
 	test_complete $result
 }
