@@ -91,6 +91,8 @@ struct options {
 	const char *input_filename;
 	const char *output_filename;
 	const char *histo_filename;
+	const char *clu_filename;
+	const char *lut_filename;
 
 	const struct format_info *output_format;
 	unsigned int output_height;
@@ -793,6 +795,164 @@ static void image_compose(const struct image *input, struct image *output,
 }
 
 /* -----------------------------------------------------------------------------
+ * Look Up Table
+ */
+
+static int image_lut_1d(const struct image *input, struct image *output,
+			const char *filename)
+{
+	const uint8_t *idata = input->data;
+	uint8_t *odata = output->data;
+	unsigned int comp_map[3];
+	uint8_t c0, c1, c2;
+	unsigned int x, y;
+	uint8_t lut[1024];
+	int ret;
+	int fd;
+
+	fd = open(filename, O_RDONLY);
+	if (fd < 0) {
+		printf("Unable to open LUT file %s: %s (%d)\n", filename,
+		       strerror(errno), errno);
+		return -errno;
+	}
+
+	ret = file_read(fd, lut, sizeof(lut));
+	close(fd);
+	if (ret < 0) {
+		printf("Unable to read 1D LUT file: %s (%d)\n", strerror(-ret),
+		       ret);
+		return ret;
+	}
+	if ((size_t)ret != sizeof(lut)) {
+		printf("Invalid 1D LUT file: file too short\n");
+		return -ENODATA;
+	}
+
+	if (input->format->is_yuv)
+		memcpy(comp_map, (unsigned int[3]){ 1, 0, 2 },
+		       sizeof(comp_map));
+	else
+		memcpy(comp_map, (unsigned int[3]){ 2, 1, 0 },
+		       sizeof(comp_map));
+
+	for (y = 0; y < input->height; ++y) {
+		for (x = 0; x < input->width; ++x) {
+			c0 = *idata++;
+			c1 = *idata++;
+			c2 = *idata++;
+
+			*odata++ = lut[c0*4 + comp_map[0]];
+			*odata++ = lut[c1*4 + comp_map[1]];
+			*odata++ = lut[c2*4 + comp_map[2]];
+		}
+	}
+
+	return 0;
+}
+
+static int image_lut_3d(const struct image *input, struct image *output,
+			const char *filename)
+{
+	const uint8_t *idata = input->data;
+	uint8_t *odata = output->data;
+	unsigned int comp_map[3];
+	unsigned int x, y;
+	uint32_t lut[17*17*17];
+	int ret;
+	int fd;
+
+	fd = open(filename, O_RDONLY);
+	if (fd < 0) {
+		printf("Unable to open 3D LUT file %s: %s (%d)\n", filename,
+		       strerror(errno), errno);
+		return -errno;
+	}
+
+	ret = file_read(fd, lut, sizeof(lut));
+	close(fd);
+	if (ret < 0) {
+		printf("Unable to read 3D LUT file: %s (%d)\n", strerror(-ret),
+		       ret);
+		return ret;
+	}
+	if ((size_t)ret != sizeof(lut)) {
+		printf("Invalid 3D LUT file: file too short\n");
+		return -ENODATA;
+	}
+
+	if (input->format->is_yuv)
+		memcpy(comp_map, (unsigned int[3]){ 2, 0, 1 },
+		       sizeof(comp_map));
+	else
+		memcpy(comp_map, (unsigned int[3]){ 0, 1, 2 },
+		       sizeof(comp_map));
+
+	for (y = 0; y < input->height; ++y) {
+		for (x = 0; x < input->width; ++x) {
+			double a1_ratio, a2_ratio, a3_ratio;
+			unsigned int a1, a2, a3;
+			double c0, c1, c2;
+			uint8_t c[3];
+
+			c[0] = idata[comp_map[0]];
+			c[1] = idata[comp_map[1]];
+			c[2] = idata[comp_map[2]];
+
+			a1 = c[0] >> 4;
+			a2 = c[1] >> 4;
+			a3 = c[2] >> 4;
+
+			/*
+			 * Implement the hardware MVS (Max Value Stretch)
+			 * behaviour: move the point by one step towards the
+			 * upper limit of the grid if we're closer than 0.5 to
+			 * that limit.
+			 */
+			a1_ratio = ((c[0] & 0xf) + (c[0] >= 0xf8 ? 1 : 0)) / 16.;
+			a2_ratio = ((c[1] & 0xf) + (c[1] >= 0xf8 ? 1 : 0)) / 16.;
+			a3_ratio = ((c[2] & 0xf) + (c[2] >= 0xf8 ? 1 : 0)) / 16.;
+
+#define _LUT(a1, a2, a3, offset)	((lut[(a1)+(a2)*17+(a3)*17*17] >> (offset)) & 0xff)
+			c0 = _LUT(a1,   a2,   a3,   16) * (1 - a1_ratio) * (1 - a2_ratio) * (1 - a3_ratio)
+			   + _LUT(a1,   a2,   a3+1, 16) * (1 - a1_ratio) * (1 - a2_ratio) * a3_ratio
+			   + _LUT(a1,   a2+1, a3,   16) * (1 - a1_ratio) * a2_ratio       * (1 - a3_ratio)
+			   + _LUT(a1,   a2+1, a3+1, 16) * (1 - a1_ratio) * a2_ratio       * a3_ratio
+			   + _LUT(a1+1, a2,   a3,   16) * a1_ratio       * (1 - a2_ratio) * (1 - a3_ratio)
+			   + _LUT(a1+1, a2,   a3+1, 16) * a1_ratio       * (1 - a2_ratio) * a3_ratio
+			   + _LUT(a1+1, a2+1, a3,   16) * a1_ratio       * a2_ratio       * (1 - a3_ratio)
+			   + _LUT(a1+1, a2+1, a3+1, 16) * a1_ratio       * a2_ratio       * a3_ratio;
+			c1 = _LUT(a1,   a2,   a3,    8) * (1 - a1_ratio) * (1 - a2_ratio) * (1 - a3_ratio)
+			   + _LUT(a1,   a2,   a3+1,  8) * (1 - a1_ratio) * (1 - a2_ratio) * a3_ratio
+			   + _LUT(a1,   a2+1, a3,    8) * (1 - a1_ratio) * a2_ratio       * (1 - a3_ratio)
+			   + _LUT(a1,   a2+1, a3+1,  8) * (1 - a1_ratio) * a2_ratio       * a3_ratio
+			   + _LUT(a1+1, a2,   a3,    8) * a1_ratio       * (1 - a2_ratio) * (1 - a3_ratio)
+			   + _LUT(a1+1, a2,   a3+1,  8) * a1_ratio       * (1 - a2_ratio) * a3_ratio
+			   + _LUT(a1+1, a2+1, a3,    8) * a1_ratio       * a2_ratio       * (1 - a3_ratio)
+			   + _LUT(a1+1, a2+1, a3+1,  8) * a1_ratio       * a2_ratio       * a3_ratio;
+			c2 = _LUT(a1,   a2,   a3,    0) * (1 - a1_ratio) * (1 - a2_ratio) * (1 - a3_ratio)
+			   + _LUT(a1,   a2,   a3+1,  0) * (1 - a1_ratio) * (1 - a2_ratio) * a3_ratio
+			   + _LUT(a1,   a2+1, a3,    0) * (1 - a1_ratio) * a2_ratio       * (1 - a3_ratio)
+			   + _LUT(a1,   a2+1, a3+1,  0) * (1 - a1_ratio) * a2_ratio       * a3_ratio
+			   + _LUT(a1+1, a2,   a3,    0) * a1_ratio       * (1 - a2_ratio) * (1 - a3_ratio)
+			   + _LUT(a1+1, a2,   a3+1,  0) * a1_ratio       * (1 - a2_ratio) * a3_ratio
+			   + _LUT(a1+1, a2+1, a3,    0) * a1_ratio       * a2_ratio       * (1 - a3_ratio)
+			   + _LUT(a1+1, a2+1, a3+1,  0) * a1_ratio       * a2_ratio       * a3_ratio;
+#undef _LUT
+
+			odata[comp_map[0]] = round(c0);
+			odata[comp_map[1]] = round(c1);
+			odata[comp_map[2]] = round(c2);
+
+			idata += 3;
+			odata += 3;
+		}
+	}
+
+	return 0;
+}
+
+/* -----------------------------------------------------------------------------
  * Histogram
  */
 
@@ -947,6 +1107,35 @@ static int process(const struct options *options)
 		input = composed;
 	}
 
+	/* Look-up tables */
+	if (options->lut_filename) {
+		struct image *lut;
+
+		lut = image_new(input->format, input->width, input->height);
+		if (!lut) {
+			ret = -ENOMEM;
+			goto done;
+		}
+
+		image_lut_1d(input, lut, options->lut_filename);
+		image_delete(input);
+		input = lut;
+	}
+
+	if (options->clu_filename) {
+		struct image *clu;
+
+		clu = image_new(input->format, input->width, input->height);
+		if (!clu) {
+			ret = -ENOMEM;
+			goto done;
+		}
+
+		image_lut_3d(input, clu, options->clu_filename);
+		image_delete(input);
+		input = clu;
+	}
+
 	/* Compute the histogram */
 	if (options->histo_filename) {
 		ret = histogram(input, options->histo_filename);
@@ -1057,6 +1246,8 @@ static void usage(const char *argv0)
 	printf("			Use -f help to list the supported formats\n");
 	printf("-h, --help		Show this help screen\n");
 	printf("-H, --histogram file	Compute histogram on the output image and store it to file\n");
+	printf("-l, --lut file		Apply 1D Look Up Table from file\n");
+	printf("-L, --clu file		Apply 3D Look Up Table from file\n");
 	printf("-o, --output file	Store the output image to file\n");
 	printf("-q, --quantization q	Set the quantization method. Valid values are\n");
 	printf("			limited or full\n");
@@ -1075,11 +1266,13 @@ static void list_formats(void)
 
 static struct option opts[] = {
 	{"alpha", 1, 0, 'a'},
+	{"clu", 1, 0, 'L'},
 	{"compose", 1, 0, 'c'},
 	{"encoding", 1, 0, 'e'},
 	{"format", 1, 0, 'f'},
 	{"help", 0, 0, 'h'},
 	{"histogram", 1, 0, 'H'},
+	{"lut", 1, 0, 'l'},
 	{"output", 1, 0, 'o'},
 	{"quantization", 1, 0, 'q'},
 	{"size", 1, 0, 's'},
@@ -1104,7 +1297,7 @@ static int parse_args(struct options *options, int argc, char *argv[])
 	options->params.quantization = V4L2_QUANTIZATION_LIM_RANGE;
 
 	opterr = 0;
-	while ((c = getopt_long(argc, argv, "a:c:e:f:hH:o:q:s:y", opts, NULL)) != -1) {
+	while ((c = getopt_long(argc, argv, "a:c:e:f:hH:l:L:o:q:s:y", opts, NULL)) != -1) {
 
 		switch (c) {
 		case 'a': {
@@ -1175,6 +1368,14 @@ static int parse_args(struct options *options, int argc, char *argv[])
 
 		case 'H':
 			options->histo_filename = optarg;
+			break;
+
+		case 'l':
+			options->lut_filename = optarg;
+			break;
+
+		case 'L':
+			options->clu_filename = optarg;
 			break;
 
 		case 'o':
