@@ -23,7 +23,7 @@ test_scale() {
 	$vsp_runner $mdev input 0 $format &
 	$vsp_runner $mdev output 0 $format
 
-	result=$(compare_frames exact scaled)
+	result=$(compare_frames exact)
 
 	test_complete $result
 }

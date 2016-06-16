@@ -20,7 +20,7 @@ test_wpf_packing() {
 	$vsp_runner $mdev input 0 ARGB32 &
 	$vsp_runner $mdev output 0 $format
 
-	result=$(compare_frames exact reference)
+	result=$(compare_frames exact)
 
 	test_complete $result
 }

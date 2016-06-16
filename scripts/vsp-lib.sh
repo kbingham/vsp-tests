@@ -86,20 +86,11 @@ vsp1_set_control() {
 
 reference_frame() {
 	local file=$1
-	local reftype=$2
-	local format=$3
-	local size=$4
+	local format=$2
+	local size=$3
 
 	local alpha=
 	local options=
-
-	case $reftype in
-	reference | scaled)
-		;;
-	composed-*)
-		options="$options -c ${reftype/composed-/}"
-		;;
-	esac
 
 	case $format in
 	ARGB555)
@@ -121,6 +112,7 @@ reference_frame() {
 		;;
 	esac
 
+	[ x$__vsp_bru_inputs != x ] && options="$options -c $__vsp_bru_inputs"
 	$(format_v4l2_is_yuv $format) && options="$options -y"
 
 	$genimage -f $format -s $size -a $alpha $options -o $file \
@@ -202,14 +194,13 @@ compare_frame_fuzzy() {
 
 compare_frames() {
 	local method=$1
-	local reftype=$2
 	local format=$__vsp_wpf_format
 	local wpf=$__vsp_wpf_index
 
 	local fmt=$(echo $format | tr '[:upper:]' '[:lower:]')
 	local size=$(vsp1_entity_get_size wpf.$wpf 1)
 
-	reference_frame ref-frame.bin $reftype $format $size
+	reference_frame ref-frame.bin $format $size
 
 	local result="pass"
 	for frame in frame-*.bin ; do
@@ -290,6 +281,7 @@ pipe_rpf_bru() {
 	$mediactl -d $mdev -l "'$dev bru':$bru_output -> '$dev wpf.0':0 [1]"
 	$mediactl -d $mdev -l "'$dev wpf.0':1 -> '$dev wpf.0 output':0 [1]"
 
+	__vsp_bru_inputs=$ninputs
 	__vsp_wpf_index=0
 }
 
@@ -344,6 +336,7 @@ pipe_rpf_wpf() {
 pipe_reset() {
 	$mediactl -d $mdev -r
 
+	__vsp_bru_inputs=
 	__vsp_wpf_index=
 	__vsp_wpf_format=
 }

@@ -20,7 +20,7 @@ test_wpf_packing() {
 	$vsp_runner $mdev input 0 YUYV &
 	$vsp_runner $mdev output 0 $format
 
-	result=$(compare_frames fuzzy reference)
+	result=$(compare_frames fuzzy)
 
 	test_complete $result
 }

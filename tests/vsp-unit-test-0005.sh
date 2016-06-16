@@ -21,7 +21,7 @@ test_rpf() {
 	$vsp_runner $mdev input $rpf $format &
 	$vsp_runner $mdev output 0 $format
 
-	result=$(compare_frames exact reference)
+	result=$(compare_frames exact)
 
 	test_complete $result
 }
