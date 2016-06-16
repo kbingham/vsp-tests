@@ -88,6 +88,7 @@ reference_frame() {
 	local file=$1
 	local format=$2
 	local size=$3
+	shift 3
 
 	local alpha=
 	local options=
@@ -111,6 +112,30 @@ reference_frame() {
 		alpha=255
 		;;
 	esac
+
+	local arg
+	for arg in $* ; do
+		local name=$(echo $arg | cut -d '=' -f 1)
+		local value=$(echo $arg | cut -d '=' -f 2)
+
+		case $name in
+		clu)
+			options="$options --clu $value"
+			;;
+		hflip)
+			[ x$value = x1 ] && options="$options --hflip"
+			;;
+		lut)
+			options="$options --lut $value"
+			;;
+		rotate)
+			[ x$value = x90 ] && options="$options --rotate"
+			;;
+		vflip)
+			[ x$value = x1 ] && options="$options --vflip"
+			;;
+		esac
+	done
 
 	[ x$__vsp_bru_inputs != x ] && options="$options -c $__vsp_bru_inputs"
 	$(format_v4l2_is_yuv $format) && options="$options -y"
@@ -193,6 +218,7 @@ compare_frame_fuzzy() {
 }
 
 compare_frames() {
+	local args=$*
 	local format=$__vsp_wpf_format
 	local wpf=$__vsp_wpf_index
 
@@ -204,18 +230,23 @@ compare_frames() {
 		method=fuzzy
 	fi
 
-	reference_frame ref-frame.bin $format $size
+	reference_frame ref-frame.bin $format $size $args
 
 	local result="pass"
+	local params=${args// /-}
+	params=${params:+-$params}
+	params=${params//\//_}
+	params=$fmt-$size$params
+
 	for frame in frame-*.bin ; do
 		(compare_frame_$method $format $size $frame ref-frame.bin) || {
-			mv $frame ${0/.sh/}-${frame/.bin/-$fmt-$size.bin} ;
+			mv $frame ${0/.sh/}-${frame/.bin/-$params.bin} ;
 			result="fail"
 		}
 	done
 
 	if [ $result = "fail" ] ; then
-		mv ref-frame.bin ${0/.sh/}-ref-frame-$fmt-$size.bin
+		mv ref-frame.bin ${0/.sh/}-ref-frame-$params.bin
 	else
 		rm -f ref-frame.bin
 	fi
