@@ -27,8 +27,8 @@ test_scale() {
 	pipe_configure $pipe
 	format_configure $pipe $format $insize $format $outsize
 
-	$vsp_runner $mdev input 0 $format &
-	$vsp_runner $mdev output 0 $format
+	vsp_runner rpf.0 &
+	vsp_runner wpf.0
 
 	result=$(compare_frames)
 

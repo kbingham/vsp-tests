@@ -19,8 +19,8 @@ test_rpf() {
 	pipe_configure rpf-wpf $rpf 0
 	format_configure rpf-wpf $rpf 0 $format 1024x768 $format
 
-	$vsp_runner $mdev input $rpf $format &
-	$vsp_runner $mdev output 0 $format
+	vsp_runner rpf.$rpf &
+	vsp_runner wpf.0
 
 	result=$(compare_frames)
 

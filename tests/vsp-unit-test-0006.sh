@@ -15,7 +15,7 @@ test_no_rpf() {
 	pipe_configure none
 	format_configure wpf $format 1024x768 0
 
-	$vsp_runner $mdev output 0 $format
+	vsp_runner wpf.0
 
 	# The test always passes if the kernel doesn't crash
 	test_complete pass
@@ -27,7 +27,7 @@ test_no_wpf() {
 	pipe_configure none
 	format_configure rpf $format 1024x768 0
 
-	$vsp_runner $mdev input 0 $format
+	vsp_runner rpf.0
 
 	# The test always passes if the kernel doesn't crash
 	test_complete pass

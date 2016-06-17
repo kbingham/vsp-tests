@@ -19,9 +19,9 @@ test_bru() {
 	format_configure rpf-bru $format 1024x768 $ninputs
 
 	for input in `seq 0 1 $((ninputs-1))` ; do
-		$vsp_runner $mdev input $input $format &
+		vsp_runner rpf.$input &
 	done
-	$vsp_runner $mdev output 0 $format
+	vsp_runner wpf.0
 
 	result=$(compare_frames)
 

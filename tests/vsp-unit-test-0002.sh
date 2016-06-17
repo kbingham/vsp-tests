@@ -17,8 +17,8 @@ test_wpf_packing() {
 	pipe_configure rpf-wpf 0 0
 	format_configure rpf-wpf 0 0 YUV444M 1024x768 $format
 
-	$vsp_runner $mdev input 0 YUV444M &
-	$vsp_runner $mdev output 0 $format
+	vsp_runner rpf.0 &
+	vsp_runner wpf.0
 
 	result=$(compare_frames)
 

@@ -16,9 +16,9 @@ test_histogram() {
 	pipe_configure rpf-hgo
 	format_configure rpf-hgo $format 1024x768
 
-	$vsp_runner $mdev hgo &
-	$vsp_runner $mdev input 0 $format &
-	$vsp_runner $mdev output 0 $format
+	vsp_runner hgo &
+	vsp_runner rpf.0 &
+	vsp_runner wpf.0
 
 	result=$(compare_histograms)
 

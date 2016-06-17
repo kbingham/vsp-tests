@@ -388,6 +388,7 @@ pipe_reset() {
 	$mediactl -d $mdev -r
 
 	__vsp_bru_inputs=
+	__vsp_rpf_format=
 	__vsp_uds_scale=
 	__vsp_wpf_index=
 	__vsp_wpf_format=
@@ -438,6 +439,8 @@ format_rpf() {
 	local rpf=$3
 
 	$mediactl -d $mdev -V "'$dev rpf.$rpf':0 [fmt:$format/$size]"
+
+	__vsp_rpf_format=$1
 }
 
 format_rpf_bru() {
@@ -458,6 +461,7 @@ format_rpf_bru() {
 	$mediactl -d $mdev -V "'$dev wpf.0':0 [fmt:$format/$size]"
 	$mediactl -d $mdev -V "'$dev wpf.0':1 [fmt:$format/$size]"
 
+	__vsp_rpf_format=$1
 	__vsp_wpf_format=$1
 }
 
@@ -478,6 +482,7 @@ format_rpf_bru_uds() {
 	$mediactl -d $mdev -V "'$dev wpf.0':1 [fmt:$outfmt/$outsize]"
 
 	[ $insize != $outsize ] && __vsp_uds_scale=true
+	__vsp_rpf_format=$1
 	__vsp_wpf_format=$3
 }
 
@@ -491,6 +496,7 @@ format_rpf_clu() {
 	$mediactl -d $mdev -V "'$dev wpf.0':0 [fmt:$format/$size]"
 	$mediactl -d $mdev -V "'$dev wpf.0':1 [fmt:$format/$size]"
 
+	__vsp_rpf_format=$1
 	__vsp_wpf_format=$1
 }
 
@@ -505,6 +511,7 @@ format_rpf_hgo() {
 	$mediactl -d $mdev -V "'$dev wpf.0':1 [fmt:$format/$size]"
 	$mediactl -d $mdev -V "'$dev hgo':0   [fmt:$format/$size $crop $compose]"
 
+	__vsp_rpf_format=$1
 	__vsp_wpf_format=$1
 }
 
@@ -518,6 +525,7 @@ format_rpf_lut() {
 	$mediactl -d $mdev -V "'$dev wpf.0':0 [fmt:$format/$size]"
 	$mediactl -d $mdev -V "'$dev wpf.0':1 [fmt:$format/$size]"
 
+	__vsp_rpf_format=$1
 	__vsp_wpf_format=$1
 }
 
@@ -534,6 +542,7 @@ format_rpf_uds() {
 	$mediactl -d $mdev -V "'$dev wpf.0':1 [fmt:$outfmt/$outsize]"
 
 	[ $insize != $outsize ] && __vsp_uds_scale=true
+	__vsp_rpf_format=$1
 	__vsp_wpf_format=$3
 }
 
@@ -554,6 +563,7 @@ format_rpf_uds_bru() {
 	$mediactl -d $mdev -V "'$dev wpf.0':1 [fmt:$outfmt/$outsize]"
 
 	[ $insize != $outsize ] && __vsp_uds_scale=true
+	__vsp_rpf_format=$1
 	__vsp_wpf_format=$3
 }
 
@@ -577,6 +587,7 @@ format_rpf_wpf() {
 	$mediactl -d $mdev -V "'$dev wpf.$wpf':0 [fmt:$infmt/$size $crop]"
 	$mediactl -d $mdev -V "'$dev wpf.$wpf':1 [fmt:$outfmt/$outsize]"
 
+	__vsp_rpf_format=$3
 	__vsp_wpf_format=$5
 }
 
@@ -596,6 +607,101 @@ format_configure() {
 	shift 1
 
 	format_$pipe $*
+}
+
+# ------------------------------------------------------------------------------
+# Frame capture and output
+#
+
+generate_input_frame() {
+	local file=$1
+	local format=$2
+	local size=$3
+
+	local alpha=
+	local options=
+
+	case $format in
+	ARGB555)
+		alpha=255
+		;;
+	ABGR32 | ARGB32)
+		alpha=200
+		;;
+	XRGB555 | XBGR32 | XRGB32)
+		alpha=0
+		;;
+	*)
+		alpha=255
+		;;
+	esac
+
+	$(format_v4l2_is_yuv $format) && options="$options -y"
+
+	$genimage -f $format -s $size -a $alpha $options -o $file \
+		frames/frame-reference-1024x768.pnm
+}
+
+vsp_runner() {
+	local entity=$1
+	shift
+
+	local option
+	local buffers=4
+	local count=10
+	local skip=7
+
+	for option in $* ; do
+		case $option in
+		--buffers=*)
+			buffers=${option/--buffers=/}
+			;;
+
+		--count=*)
+			count=${option/--count=/}
+			;;
+
+		--skip=*)
+			skip=${option/--skip=/}
+			;;
+
+		*)
+			return 1
+			;;
+		esac
+	done
+
+	local file
+	local videodev
+	local format
+	local size
+
+	case $entity in
+	hgo)
+		videodev=$(vsp1_entity_subdev "hgo histo")
+		file="histo-#.bin"
+		buffers=10
+		;;
+
+	rpf.*)
+		videodev=$(vsp1_entity_subdev "$entity input")
+		format=$__vsp_rpf_format
+		size=$(vsp1_entity_get_size $entity 0)
+		file=${entity}.bin
+		generate_input_frame $file $format $size
+		;;
+
+	wpf.*)
+		videodev=$(vsp1_entity_subdev "$entity output")
+		format=$__vsp_wpf_format
+		size=$(vsp1_entity_get_size $entity 1)
+		file="frame-#.bin"
+		;;
+	esac
+
+	$yavta -c$count -n $buffers ${format:+-f $format} ${size:+-s $size} \
+		${skip:+--skip $skip} ${file:+--file=$file} $videodev \
+		| ./logger.sh $entity >> $logfile
 }
 
 # ------------------------------------------------------------------------------
@@ -671,6 +777,7 @@ test_complete() {
 
 	rm -f frame-*.bin
 	rm -f histo-*.bin
+	rm -f rpf.*.bin
 }
 
 test_run() {
