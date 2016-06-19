@@ -249,6 +249,7 @@ compare_frames() {
 		mv ref-frame.bin ${0/.sh/}-ref-frame-$params.bin
 	else
 		rm -f ref-frame.bin
+		rm -f frame-*.bin
 	fi
 
 	echo $result
@@ -291,6 +292,7 @@ compare_histograms() {
 		mv ref-histogram.bin ${0/.sh/}-ref-histogram-$fmt.bin
 	else
 		rm -f ref-histogram.bin
+		rm -f histo-*.bin
 	fi
 
 	echo $result
@@ -649,6 +651,7 @@ vsp_runner() {
 	local option
 	local buffers=4
 	local count=10
+	local pause=
 	local skip=7
 
 	for option in $* ; do
@@ -659,6 +662,10 @@ vsp_runner() {
 
 		--count=*)
 			count=${option/--count=/}
+			;;
+
+		--pause=*)
+			pause=${option/--pause=/}
 			;;
 
 		--skip=*)
@@ -700,8 +707,60 @@ vsp_runner() {
 	esac
 
 	$yavta -c$count -n $buffers ${format:+-f $format} ${size:+-s $size} \
-		${skip:+--skip $skip} ${file:+--file=$file} $videodev \
-		| ./logger.sh $entity >> $logfile
+		${skip:+--skip $skip} ${file:+--file=$file} ${pause:+-p$pause} \
+		$videodev | ./logger.sh $entity >> $logfile
+}
+
+vsp_runner_find() {
+	local entity=$1
+	local videodev
+
+	case $entity in
+	hgo)
+		videodev=$(vsp1_entity_subdev "hgo histo")
+		;;
+
+	rpf.*)
+		videodev=$(vsp1_entity_subdev "$entity input")
+		;;
+
+	wpf.*)
+		videodev=$(vsp1_entity_subdev "$entity output")
+		;;
+	esac
+
+	local pid
+
+	for pid in $(pidof yavta) ; do
+		(ls -l /proc/$pid/fd/ | grep -q "$videodev$") && {
+			echo $pid ;
+			break
+		}
+	done
+}
+
+vsp_runner_wait() {
+	local timeout=5
+	local pid
+
+	while [ $timeout != 0 ] ; do
+		pid=$(vsp_runner_find $1)
+		[ x$pid != x ] && break
+		sleep 1
+		timeout=$((timeout-1))
+	done
+
+	[ x$pid != x ] || return
+
+	while [ ! -f .yavta.wait.$pid ] ; do
+		sleep 1
+	done
+}
+
+vsp_runner_resume() {
+	local pid=$(vsp_runner_find $1)
+
+	[ x$pid != x ] && kill -USR1 $pid
 }
 
 # ------------------------------------------------------------------------------
