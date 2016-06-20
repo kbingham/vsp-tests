@@ -3,6 +3,7 @@
 genimage='./gen-image'
 mediactl='media-ctl'
 yavta='yavta'
+frames_dir=/tmp/
 
 # ------------------------------------------------------------------------------
 # Miscellaneous
@@ -230,7 +231,7 @@ compare_frames() {
 		method=fuzzy
 	fi
 
-	reference_frame ref-frame.bin $format $size $args
+	reference_frame ${frames_dir}ref-frame.bin $format $size $args
 
 	local result="pass"
 	local params=${args// /-}
@@ -238,18 +239,18 @@ compare_frames() {
 	params=${params//\//_}
 	params=$fmt-$size$params
 
-	for frame in frame-*.bin ; do
-		(compare_frame_$method $format $size $frame ref-frame.bin) || {
-			mv $frame ${0/.sh/}-${frame/.bin/-$params.bin} ;
+	for frame in ${frames_dir}frame-*.bin ; do
+		(compare_frame_$method $format $size $frame ${frames_dir}ref-frame.bin) || {
+			mv $frame ${0/.sh/}-$(basename ${frame/.bin/-$params.bin}) ;
 			result="fail"
 		}
 	done
 
 	if [ $result = "fail" ] ; then
-		mv ref-frame.bin ${0/.sh/}-ref-frame-$params.bin
+		mv ${frames_dir}ref-frame.bin ${0/.sh/}-ref-frame-$params.bin
 	else
-		rm -f ref-frame.bin
-		rm -f frame-*.bin
+		rm -f ${frames_dir}ref-frame.bin
+		rm -f ${frames_dir}frame-*.bin
 	fi
 
 	echo $result
@@ -278,21 +279,21 @@ compare_histograms() {
 	local fmt=$(echo $format | tr '[:upper:]' '[:lower:]')
 	local size=$(vsp1_entity_get_size wpf.$wpf 1)
 
-	reference_histogram ref-histogram.bin $format $size
+	reference_histogram ${frames_dir}ref-histogram.bin $format $size
 
 	local result="pass"
-	for histo in histo-*.bin ; do
-		(compare_histogram $histo ref-histogram.bin) || {
-			mv $histo ${0/.sh/}-${histo/.bin/-$fmt.bin} ;
+	for histo in ${frames_dir}histo-*.bin ; do
+		(compare_histogram $histo ${frames_dir}ref-histogram.bin) || {
+			mv $histo ${0/.sh/}-$(basename ${histo/.bin/-$fmt.bin}) ;
 			result="fail"
 		}
 	done
 
 	if [ $result = "fail" ] ; then
-		mv ref-histogram.bin ${0/.sh/}-ref-histogram-$fmt.bin
+		mv ${frames_dir}ref-histogram.bin ${0/.sh/}-ref-histogram-$fmt.bin
 	else
-		rm -f ref-histogram.bin
-		rm -f histo-*.bin
+		rm -f ${frames_dir}ref-histogram.bin
+		rm -f ${frames_dir}histo-*.bin
 	fi
 
 	echo $result
@@ -686,7 +687,7 @@ vsp_runner() {
 	case $entity in
 	hgo)
 		videodev=$(vsp1_entity_subdev "hgo histo")
-		file="histo-#.bin"
+		file="${frames_dir}histo-#.bin"
 		buffers=10
 		;;
 
@@ -694,7 +695,7 @@ vsp_runner() {
 		videodev=$(vsp1_entity_subdev "$entity input")
 		format=$__vsp_rpf_format
 		size=$(vsp1_entity_get_size $entity 0)
-		file=${entity}.bin
+		file=${frames_dir}${entity}.bin
 		generate_input_frame $file $format $size
 		;;
 
@@ -702,7 +703,7 @@ vsp_runner() {
 		videodev=$(vsp1_entity_subdev "$entity output")
 		format=$__vsp_wpf_format
 		size=$(vsp1_entity_get_size $entity 1)
-		file="frame-#.bin"
+		file="${frames_dir}frame-#.bin"
 		;;
 	esac
 
@@ -834,9 +835,9 @@ test_complete() {
 	echo "Done: $1" | ./logger.sh >> $logfile
 	echo $1 >&2
 
-	rm -f frame-*.bin
-	rm -f histo-*.bin
-	rm -f rpf.*.bin
+	rm -f ${frames_dir}frame-*.bin
+	rm -f ${frames_dir}histo-*.bin
+	rm -f ${frames_dir}rpf.*.bin
 }
 
 test_run() {
