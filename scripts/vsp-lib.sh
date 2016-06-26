@@ -774,7 +774,7 @@ test_init() {
 	local optional_features=$3
 
 	rm -f $logfile
-	rm -f *.bin
+	rm -f ${1/.sh/}*.bin
 
 	local best_features_count=0
 	local best_mdev=
