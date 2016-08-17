@@ -189,8 +189,12 @@ reference_histogram() {
 	local format=$2
 	local size=$3
 	local type=$4
+	local hgt_hue_areas=$5
 
-	$genimage -i $format -f $format -s $size -H $file --histogram-type $type \
+	local hue=
+	[[ "x$hgt_hue_areas" != x ]] && hue="--histogram-areas $hgt_hue_areas"
+
+	$genimage -i $format -f $format -s $size -H $file --histogram-type $type $hue \
 		frames/frame-reference-1024x768.pnm
 }
 
@@ -322,6 +326,7 @@ compare_histogram() {
 }
 
 compare_histograms() {
+	local hgt_hue_areas=$__vsp_hgt_hue_areas
 	local format=$__vsp_wpf_format
 	local type=$__vsp_histo_type
 	local wpf=$__vsp_wpf_index
@@ -329,7 +334,7 @@ compare_histograms() {
 	local fmt=$(echo $format | tr '[:upper:]' '[:lower:]')
 	local size=$(vsp1_entity_get_size wpf.$wpf 1)
 
-	reference_histogram ${frames_dir}ref-histogram.bin $format $size $type
+	reference_histogram ${frames_dir}ref-histogram.bin $format $size $type $hgt_hue_areas
 
 	local result="pass"
 	for histo in ${frames_dir}histo-*.bin ; do
@@ -397,6 +402,16 @@ pipe_rpf_hst() {
 	$mediactl -d $mdev -l "'$dev rpf.0':1 -> '$dev hst':0 [1]"
 	$mediactl -d $mdev -l "'$dev hst':1 -> '$dev wpf.0':0 [1]"
 	$mediactl -d $mdev -l "'$dev wpf.0':1 -> '$dev wpf.0 output':0 [1]"
+}
+
+pipe_rpf_hgt() {
+	$mediactl -d $mdev -l "'$dev rpf.0':1 -> '$dev hst':0 [1]"
+	$mediactl -d $mdev -l "'$dev hst':1 -> '$dev hgt':0 [1]"
+	$mediactl -d $mdev -l "'$dev hst':1 -> '$dev hsi':0 [1]"
+	$mediactl -d $mdev -l "'$dev hsi':1 -> '$dev wpf.0':0 [1]"
+	$mediactl -d $mdev -l "'$dev wpf.0':1 -> '$dev wpf.0 output':0 [1]"
+
+	__vsp_wpf_index=0
 }
 
 pipe_rpf_lut() {
@@ -604,6 +619,24 @@ format_rpf_hgo() {
 	__vsp_wpf_format=$1
 }
 
+format_rpf_hgt() {
+	local format=$(format_v4l2_to_mbus $1)
+	local size=$2
+	local crop=${3:+crop:$3}
+	local compose=${4:+compose:$4}
+
+	$mediactl -d $mdev -V "'$dev rpf.0':0 [fmt:$format/$size]"
+	$mediactl -d $mdev -V "'$dev hst':0   [fmt:$format/$size]"
+	$mediactl -d $mdev -V "'$dev hgt':0   [fmt:$format/$size $crop $compose]"
+	$mediactl -d $mdev -V "'$dev hsi':0   [fmt:$format/$size]"
+	$mediactl -d $mdev -V "'$dev wpf.0':0 [fmt:$format/$size]"
+	$mediactl -d $mdev -V "'$dev wpf.0':1 [fmt:$format/$size]"
+
+	__vsp_histo_type=hgt
+	__vsp_rpf_format=$1
+	__vsp_wpf_format=$1
+}
+
 format_rpf_lut() {
 	local format=$(format_v4l2_to_mbus $1)
 	local size=$2
@@ -785,6 +818,18 @@ format_configure() {
 }
 
 # ------------------------------------------------------------------------------
+# Module-specific configuration
+#
+
+hgt_configure() {
+	local hue_areas=$1
+
+	vsp1_set_control hgt 'Boundary Values for Hue Area' "{$hue_areas}"
+
+	__vsp_hgt_hue_areas=$hue_areas
+}
+
+# ------------------------------------------------------------------------------
 # Frame capture and output
 #
 
@@ -863,6 +908,12 @@ vsp_runner() {
 		buffers=10
 		;;
 
+	hgt)
+		videodev=$(vsp1_entity_subdev "hgt histo")
+		file="${frames_dir}histo-#.bin"
+		buffers=10
+		;;
+
 	rpf.*)
 		videodev=$(vsp1_entity_subdev "$entity input")
 		format=$__vsp_rpf_format
@@ -891,6 +942,10 @@ vsp_runner_find() {
 	case $entity in
 	hgo)
 		videodev=$(vsp1_entity_subdev "hgo histo")
+		;;
+
+	hgt)
+		videodev=$(vsp1_entity_subdev "hgt histo")
 		;;
 
 	rpf.*)
