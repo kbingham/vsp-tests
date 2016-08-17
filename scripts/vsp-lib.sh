@@ -188,8 +188,9 @@ reference_histogram() {
 	local file=$1
 	local format=$2
 	local size=$3
+	local type=$4
 
-	$genimage -i $format -f $format -s $size -H $file \
+	$genimage -i $format -f $format -s $size -H $file --histogram-type $type \
 		frames/frame-reference-1024x768.pnm
 }
 
@@ -322,12 +323,13 @@ compare_histogram() {
 
 compare_histograms() {
 	local format=$__vsp_wpf_format
+	local type=$__vsp_histo_type
 	local wpf=$__vsp_wpf_index
 
 	local fmt=$(echo $format | tr '[:upper:]' '[:lower:]')
 	local size=$(vsp1_entity_get_size wpf.$wpf 1)
 
-	reference_histogram ${frames_dir}ref-histogram.bin $format $size
+	reference_histogram ${frames_dir}ref-histogram.bin $format $size $type
 
 	local result="pass"
 	for histo in ${frames_dir}histo-*.bin ; do
@@ -452,6 +454,7 @@ pipe_reset() {
 	$mediactl -d $mdev -r
 
 	__vsp_bru_inputs=
+	__vsp_histo_type=
 	__vsp_rpf_format=
 	__vsp_wpf_index=0
 	__vsp_wpf_format=
@@ -596,6 +599,7 @@ format_rpf_hgo() {
 	$mediactl -d $mdev -V "'$dev wpf.0':1 [fmt:$format/$size]"
 	$mediactl -d $mdev -V "'$dev hgo':0   [fmt:$format/$size $crop $compose]"
 
+	__vsp_histo_type=hgo
 	__vsp_rpf_format=$1
 	__vsp_wpf_format=$1
 }
