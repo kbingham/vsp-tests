@@ -381,6 +381,14 @@ pipe_rpf_hgo() {
 	__vsp_wpf_index=0
 }
 
+pipe_rpf_hst() {
+	$mediactl -d $mdev -l "'$dev rpf.0':1 -> '$dev hst':0 [1]"
+	$mediactl -d $mdev -l "'$dev hst':1 -> '$dev wpf.0':0 [1]"
+	$mediactl -d $mdev -l "'$dev wpf.0':1 -> '$dev wpf.0 output':0 [1]"
+
+	__vsp_wpf_index=0
+}
+
 pipe_rpf_lut() {
 	$mediactl -d $mdev -l "'$dev rpf.0':1 -> '$dev lut':0 [1]"
 	$mediactl -d $mdev -l "'$dev lut':1 -> '$dev wpf.0':0 [1]"
@@ -454,6 +462,10 @@ format_v4l2_to_mbus() {
 		echo "ARGB32";
 		;;
 
+	HSV24 | HSV32)
+		echo "AHSV8888_1X32";
+		;;
+
 	UYVY | VYUY | YUYV | YVYU | NV12M | NV16M | NV21M | NV61M | YUV420M | YUV422M | YUV444M)
 		echo "AYUV32"
 		;;
@@ -462,7 +474,7 @@ format_v4l2_to_mbus() {
 		echo "Invalid format $1" >&2
 		echo -e "Valid formats are
 \tRGB332, ARGB555, XRGB555, RGB565, BGR24, RGB24,
-\tXBGR32, XRGB32, ABGR32, ARGB32,
+\tXBGR32, XRGB32, ABGR32, ARGB32, HSV24, HSV32
 \tUYVY, VYUY, YUYV, YVYU,
 \tNV12M, NV16M, NV21M, NV61M,
 \tYUV420M, YUV422M, YUV444M" >&2
@@ -540,6 +552,20 @@ format_rpf_clu() {
 
 	__vsp_rpf_format=$1
 	__vsp_wpf_format=$1
+}
+
+format_rpf_hst() {
+	local format=$(format_v4l2_to_mbus $1)
+	local size=$2
+
+	$mediactl -d $mdev -V "'$dev rpf.0':0 [fmt:$format/$size]"
+	$mediactl -d $mdev -V "'$dev hst':0 [fmt:$format/$size]"
+	$mediactl -d $mdev -V "'$dev hst':1 [fmt:AHSV8888_1X32/$size]"
+	$mediactl -d $mdev -V "'$dev wpf.0':0 [fmt:AHSV8888_1X32/$size]"
+	$mediactl -d $mdev -V "'$dev wpf.0':1 [fmt:AHSV8888_1X32/$size]"
+
+	__vsp_rpf_format=$1
+	__vsp_wpf_format=$3
 }
 
 format_rpf_hgo() {
