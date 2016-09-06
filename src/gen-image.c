@@ -46,6 +46,12 @@ do {	\
 	(b) = __tmp;			\
 } while (0)
 
+enum format_type {
+	FORMAT_RGB,
+	FORMAT_YUV,
+	FORMAT_HSV,
+};
+
 struct format_color_component {
 	unsigned char length;
 	unsigned char offset;
@@ -56,6 +62,14 @@ struct format_rgb_info {
 	struct format_color_component red;
 	struct format_color_component green;
 	struct format_color_component blue;
+	struct format_color_component alpha;
+};
+
+struct format_hsv_info {
+	unsigned int bpp;
+	struct format_color_component hue;
+	struct format_color_component saturation;
+	struct format_color_component value;
 	struct format_color_component alpha;
 };
 
@@ -75,8 +89,9 @@ struct format_yuv_info {
 
 struct format_info {
 	const char *name;
-	bool is_yuv;
+	enum format_type type;
 	struct format_rgb_info rgb;
+	struct format_hsv_info hsv;
 	struct format_yuv_info yuv;
 };
 
@@ -118,6 +133,10 @@ struct options {
  * Format information
  */
 
+#define MAKE_HSV_INFO(hl, ho, sl, so, vl, vo, al, ao) \
+	.hue = { (hl), (ho) }, .saturation = { (sl), (so) }, \
+	.value = { (vl), (vo) }, .alpha = { (al), (ao) }
+
 #define MAKE_RGB_INFO(rl, ro, gl, go, bl, bo, al, ao) \
 	.red = { (rl), (ro) }, .green = { (gl), (go) }, \
 	.blue = { (bl), (bo) }, .alpha = { (al), (ao) }
@@ -127,33 +146,35 @@ static const struct format_info format_info[] = {
 	 * The alpha channel maps to the X (don't care) bits for the XRGB
 	 * formats.
 	 */
-	{ "RGB332",	false, .rgb = { 8,  MAKE_RGB_INFO(3, 5, 3, 2, 2, 0, 0, 0) } },
-	{ "ARGB444",	false, .rgb = { 16, MAKE_RGB_INFO(4, 8, 4, 4, 4, 0, 4, 12) } },
-	{ "XRGB444",	false, .rgb = { 16, MAKE_RGB_INFO(4, 8, 4, 4, 4, 0, 4, 12) } },
-	{ "ARGB555",	false, .rgb = { 16, MAKE_RGB_INFO(5, 10, 5, 5, 5, 0, 1, 15) } },
-	{ "XRGB555",	false, .rgb = { 16, MAKE_RGB_INFO(5, 10, 5, 5, 5, 0, 1, 15) } },
-	{ "RGB565",	false, .rgb = { 16, MAKE_RGB_INFO(5, 11, 6, 5, 5, 0, 0, 0) } },
-	{ "BGR24",	false, .rgb = { 24, MAKE_RGB_INFO(8, 16, 8, 8, 8, 0, 0, 0) } },
-	{ "RGB24",	false, .rgb = { 24, MAKE_RGB_INFO(8, 0, 8, 8, 8, 16, 0, 0) } },
-	{ "ABGR32",	false, .rgb = { 32, MAKE_RGB_INFO(8, 16, 8, 8, 8, 0, 8, 24) } },
-	{ "XBGR32",	false, .rgb = { 32, MAKE_RGB_INFO(8, 16, 8, 8, 8, 0, 8, 24) } },
-	{ "ARGB32",	false, .rgb = { 32, MAKE_RGB_INFO(8, 8, 8, 16, 8, 24, 8, 0) } },
-	{ "XRGB32",	false, .rgb = { 32, MAKE_RGB_INFO(8, 8, 8, 16, 8, 24, 8, 0) } },
-	{ "UYVY",	true,  .yuv = { 1, YUV_YCbCr | YUV_CY, 2, 1 } },
-	{ "VYUY",	true,  .yuv = { 1, YUV_YCrCb | YUV_CY, 2, 1 } },
-	{ "YUYV",	true,  .yuv = { 1, YUV_YCbCr | YUV_YC, 2, 1 } },
-	{ "YVYU",	true,  .yuv = { 1, YUV_YCrCb | YUV_YC, 2, 1 } },
-	{ "NV12M",	true,  .yuv = { 2, YUV_YCbCr, 2, 2 } },
-	{ "NV21M",	true,  .yuv = { 2, YUV_YCrCb, 2, 2 } },
-	{ "NV16M",	true,  .yuv = { 2, YUV_YCbCr, 2, 1 } },
-	{ "NV61M",	true,  .yuv = { 2, YUV_YCrCb, 2, 1 } },
-	{ "YUV420M",	true,  .yuv = { 3, YUV_YCbCr, 2, 2 } },
-	{ "YVU420M",	true,  .yuv = { 3, YUV_YCrCb, 2, 2 } },
-	{ "YUV422M",	true,  .yuv = { 3, YUV_YCbCr, 2, 1 } },
-	{ "YVU422M",	true,  .yuv = { 3, YUV_YCrCb, 2, 1 } },
-	{ "YUV444M",	true,  .yuv = { 3, YUV_YCbCr, 1, 1 } },
-	{ "YVU444M",	true,  .yuv = { 3, YUV_YCrCb, 1, 1 } },
-	{ "YUV24",	true,  .yuv = { 1, YUV_YCbCr | YUV_YC, 1, 1 } },
+	{ "RGB332",	FORMAT_RGB, .rgb = { 8,  MAKE_RGB_INFO(3, 5, 3, 2, 2, 0, 0, 0) } },
+	{ "ARGB444",	FORMAT_RGB, .rgb = { 16, MAKE_RGB_INFO(4, 8, 4, 4, 4, 0, 4, 12) } },
+	{ "XRGB444",	FORMAT_RGB, .rgb = { 16, MAKE_RGB_INFO(4, 8, 4, 4, 4, 0, 4, 12) } },
+	{ "ARGB555",	FORMAT_RGB, .rgb = { 16, MAKE_RGB_INFO(5, 10, 5, 5, 5, 0, 1, 15) } },
+	{ "XRGB555",	FORMAT_RGB, .rgb = { 16, MAKE_RGB_INFO(5, 10, 5, 5, 5, 0, 1, 15) } },
+	{ "RGB565",	FORMAT_RGB, .rgb = { 16, MAKE_RGB_INFO(5, 11, 6, 5, 5, 0, 0, 0) } },
+	{ "BGR24",	FORMAT_RGB, .rgb = { 24, MAKE_RGB_INFO(8, 16, 8, 8, 8, 0, 0, 0) } },
+	{ "RGB24",	FORMAT_RGB, .rgb = { 24, MAKE_RGB_INFO(8, 0, 8, 8, 8, 16, 0, 0) } },
+	{ "ABGR32",	FORMAT_RGB, .rgb = { 32, MAKE_RGB_INFO(8, 16, 8, 8, 8, 0, 8, 24) } },
+	{ "XBGR32",	FORMAT_RGB, .rgb = { 32, MAKE_RGB_INFO(8, 16, 8, 8, 8, 0, 8, 24) } },
+	{ "ARGB32",	FORMAT_RGB, .rgb = { 32, MAKE_RGB_INFO(8, 8, 8, 16, 8, 24, 8, 0) } },
+	{ "XRGB32",	FORMAT_RGB, .rgb = { 32, MAKE_RGB_INFO(8, 8, 8, 16, 8, 24, 8, 0) } },
+	{ "HSV24",	FORMAT_HSV, .hsv = { 24, MAKE_HSV_INFO(8, 0, 8, 8, 8, 16, 0, 0) } },
+	{ "HSV32",	FORMAT_HSV, .hsv = { 32, MAKE_HSV_INFO(8, 8, 8, 16, 8, 24, 8, 0) } },
+	{ "UYVY",	FORMAT_YUV, .yuv = { 1, YUV_YCbCr | YUV_CY, 2, 1 } },
+	{ "VYUY",	FORMAT_YUV, .yuv = { 1, YUV_YCrCb | YUV_CY, 2, 1 } },
+	{ "YUYV",	FORMAT_YUV, .yuv = { 1, YUV_YCbCr | YUV_YC, 2, 1 } },
+	{ "YVYU",	FORMAT_YUV, .yuv = { 1, YUV_YCrCb | YUV_YC, 2, 1 } },
+	{ "NV12M",	FORMAT_YUV, .yuv = { 2, YUV_YCbCr, 2, 2 } },
+	{ "NV21M",	FORMAT_YUV, .yuv = { 2, YUV_YCrCb, 2, 2 } },
+	{ "NV16M",	FORMAT_YUV, .yuv = { 2, YUV_YCbCr, 2, 1 } },
+	{ "NV61M",	FORMAT_YUV, .yuv = { 2, YUV_YCrCb, 2, 1 } },
+	{ "YUV420M",	FORMAT_YUV, .yuv = { 3, YUV_YCbCr, 2, 2 } },
+	{ "YVU420M",	FORMAT_YUV, .yuv = { 3, YUV_YCrCb, 2, 2 } },
+	{ "YUV422M",	FORMAT_YUV, .yuv = { 3, YUV_YCbCr, 2, 1 } },
+	{ "YVU422M",	FORMAT_YUV, .yuv = { 3, YUV_YCrCb, 2, 1 } },
+	{ "YUV444M",	FORMAT_YUV, .yuv = { 3, YUV_YCbCr, 1, 1 } },
+	{ "YVU444M",	FORMAT_YUV, .yuv = { 3, YUV_YCrCb, 1, 1 } },
+	{ "YUV24",	FORMAT_YUV, .yuv = { 1, YUV_YCbCr | YUV_YC, 1, 1 } },
 };
 
 static const struct format_info *format_by_name(const char *name)
@@ -235,13 +256,23 @@ static struct image *image_new(const struct format_info *format,
 	image->width = width;
 	image->height = height;
 
-	if (format->is_yuv)
+	switch (format->type) {
+	case FORMAT_RGB:
+		image->size = image->width * image->height
+			     * format->rgb.bpp / 8;
+		break;
+
+	case FORMAT_HSV:
+		image->size = image->width * image->height
+			     * format->hsv.bpp / 8;
+		break;
+
+	case FORMAT_YUV:
 		image->size = image->width * image->height
 			     * (8 + 2 * 8 / format->yuv.xsub / format->yuv.ysub)
 			     / 8;
-	else
-		image->size = image->width * image->height
-			     * format->rgb.bpp / 8;
+		break;
+	}
 
 	image->data = malloc(image->size);
 	if (!image->data) {
@@ -520,6 +551,36 @@ static void image_format_rgb32(const struct image *input, struct image *output,
 	}
 }
 
+static void image_format_hsv24(const struct image *input, struct image *output,
+			       const struct params *params)
+{
+	memcpy(output->data, input->data, input->width * input->height * 3);
+}
+
+static void image_format_hsv32(const struct image *input, struct image *output,
+			       const struct params *params)
+{
+	const struct format_info *format = output->format;
+	const uint8_t *idata = input->data;
+	uint32_t *odata = output->data;
+	uint8_t h, s, v, a;
+	unsigned int x, y;
+
+	for (y = 0; y < input->height; ++y) {
+		for (x = 0; x < input->width; ++x) {
+			h = *idata++;
+			s = *idata++;
+			v = *idata++;
+			a = params->alpha;
+
+			*odata++ = (h << format->hsv.hue.offset)
+				 | (s << format->hsv.saturation.offset)
+				 | (v << format->hsv.value.offset)
+				 | (a << format->hsv.alpha.offset);
+		}
+	}
+}
+
 /*
  * In YUV packed and planar formats, when subsampling horizontally average the
  * chroma components of the two pixels to match the hardware behaviour.
@@ -765,6 +826,123 @@ static void image_convert_rgb_to_rgb(const struct image *input,
 }
 
 /* -----------------------------------------------------------------------------
+ * RGB to HSV conversion (as performed by the Renesas VSP HST)
+ */
+
+#define K 4
+static uint8_t hst_calc_h(uint8_t r, uint8_t g, uint8_t b)
+{
+	uint8_t max, min;
+	int delta;
+	int diff;
+	unsigned int third;
+	int aux;
+
+	max = max(r, max(g, b));
+	min = min(r, min(g, b));
+	delta = max - min;
+
+	if (!delta)
+		return 0;
+
+	if (max == r) {
+		diff = g - b;
+		third = 0;
+	} else if (max == g) {
+		diff = b - r;
+		third = 256 * K;
+	} else {
+		diff = r - g;
+		third = 512 * K;
+	}
+
+	aux = diff;
+	aux *= 128;
+	aux *= K;
+
+	/* Round up */
+	if (aux >= 0)
+		aux += delta - 1;
+	else
+		aux -= delta - 1;
+
+	aux /= delta;
+	aux += third;
+
+	if (diff < 0 && third)
+		aux--;
+
+	/*
+	 * Divide by three and remove K scaling
+	 */
+	if (aux > 0)
+		aux += (3 * K)/2;
+	else
+		aux -= (3 * K)/2;
+	aux /= 3 * K;
+
+	aux &= 0xff;
+
+	return  aux;
+}
+
+static uint8_t hst_calc_s(uint8_t r8, uint8_t g8, uint8_t b8)
+{
+	uint8_t max, min, delta;
+	unsigned int s;
+
+	max = max(r8, max(g8, b8));
+	min = min(r8, min(g8, b8));
+
+	delta = max - min;
+	if (!delta)
+		return 0;
+
+	s = delta * 255;
+
+	/* Special rounding,
+	 *
+	 * If the minimum RGB component is less then 128 the calculated
+	 * S value should be rounded half down else half should be
+	 * rounded up.
+	 */
+	if (min < 128)
+		return (s * 2 + max - 1) / max / 2;
+	else
+		return (s * 2 + max) / max / 2;
+}
+
+static uint8_t hst_calc_v(uint8_t r, uint8_t g, uint8_t b)
+{
+	return max(r, max(g, b));
+}
+
+static void hst_rgb_to_hsv(const uint8_t rgb[3], uint8_t hsv[3])
+{
+	hsv[0] = hst_calc_h(rgb[0], rgb[1], rgb[2]);
+	hsv[1] = hst_calc_s(rgb[0], rgb[1], rgb[2]);
+	hsv[2] = hst_calc_v(rgb[0], rgb[1], rgb[2]);
+}
+
+static void image_rgb_to_hsv(const struct image *input,
+			     struct image *output,
+			     const struct params *params)
+{
+	const uint8_t *idata = input->data;
+	uint8_t *odata = output->data;
+	unsigned int x;
+	unsigned int y;
+
+	for (y = 0; y < output->height; ++y) {
+		for (x = 0; x < output->width; ++x) {
+			hst_rgb_to_hsv(idata, odata);
+			idata += 3;
+			odata += 3;
+		}
+	}
+}
+
+/* -----------------------------------------------------------------------------
  * Image scaling
  */
 
@@ -932,7 +1110,7 @@ static int image_lut_1d(const struct image *input, struct image *output,
 		return -ENODATA;
 	}
 
-	if (input->format->is_yuv)
+	if (input->format->type == FORMAT_YUV)
 		memcpy(comp_map, (unsigned int[3]){ 1, 0, 2 },
 		       sizeof(comp_map));
 	else
@@ -984,7 +1162,7 @@ static int image_lut_3d(const struct image *input, struct image *output,
 		return -ENODATA;
 	}
 
-	if (input->format->is_yuv)
+	if (input->format->type == FORMAT_YUV)
 		memcpy(comp_map, (unsigned int[3]){ 2, 0, 1 },
 		       sizeof(comp_map));
 	else
@@ -1070,7 +1248,7 @@ static void histogram_compute(const struct image *image, void *histo)
 	unsigned int x, y;
 	unsigned int i, j;
 
-	if (image->format->is_yuv)
+	if (image->format->type == FORMAT_YUV)
 		memcpy(comp_map, (unsigned int[3]){ 2, 0, 1 }, sizeof(comp_map));
 	else
 		memcpy(comp_map, (unsigned int[3]){ 0, 1, 2 }, sizeof(comp_map));
@@ -1156,7 +1334,7 @@ static int process(const struct options *options)
 	}
 
 	/* Convert colorspace */
-	if (options->input_format->is_yuv) {
+	if (options->input_format->type == FORMAT_YUV) {
 		struct image *yuv;
 
 		yuv = image_new(format_by_name("YUV24"), input->width,
@@ -1293,15 +1471,21 @@ static int process(const struct options *options)
 	}
 
 	/* Format the output */
-	if (input->format->is_yuv && !options->output_format->is_yuv) {
-		printf("RGB output with YUV processing not supported\n");
+	if (input->format->type != options->output_format->type &&
+	    input->format->type != FORMAT_RGB) {
+		printf("Format conversion with non-RGB input not supported\n");
 		ret = -EINVAL;
 		goto done;
 	}
 
-	if (!input->format->is_yuv && options->output_format->is_yuv) {
-		const struct format_info *format = format_by_name("YUV24");
+	if (input->format->type != options->output_format->type) {
+		const struct format_info *format;
 		struct image *converted;
+
+		if (options->output_format->type == FORMAT_YUV)
+			format = format_by_name("YUV24");
+		else
+			format = format_by_name("HSV24");
 
 		converted = image_new(format, input->width, input->height);
 		if (!converted) {
@@ -1309,8 +1493,12 @@ static int process(const struct options *options)
 			goto done;
 		}
 
-		image_colorspace_rgb_to_yuv(input, converted, format,
-					    &options->params);
+		if (options->output_format->type == FORMAT_YUV)
+			image_colorspace_rgb_to_yuv(input, converted, format,
+						    &options->params);
+		else
+			image_rgb_to_hsv(input, converted, &options->params);
+
 		image_delete(input);
 		input = converted;
 	}
@@ -1321,20 +1509,8 @@ static int process(const struct options *options)
 		goto done;
 	}
 
-	if (output->format->is_yuv) {
-		switch (output->format->yuv.num_planes) {
-		case 1:
-			image_format_yuv_packed(input, output, &options->params);
-			break;
-		case 2:
-		case 3:
-			image_format_yuv_planar(input, output, &options->params);
-			break;
-		default:
-			ret = -EINVAL;
-			break;
-		}
-	} else {
+	switch (output->format->type) {
+	case FORMAT_RGB:
 		switch (output->format->rgb.bpp) {
 		case 8:
 			image_format_rgb8(input, output, &options->params);
@@ -1352,6 +1528,36 @@ static int process(const struct options *options)
 			ret = -EINVAL;
 			break;
 		}
+		break;
+
+	case FORMAT_HSV:
+		switch (output->format->hsv.bpp) {
+		case 24:
+			image_format_hsv24(input, output, &options->params);
+			break;
+		case 32:
+			image_format_hsv32(input, output, &options->params);
+			break;
+		default:
+			ret = -EINVAL;
+			break;
+		}
+		break;
+
+	case FORMAT_YUV:
+		switch (output->format->yuv.num_planes) {
+		case 1:
+			image_format_yuv_packed(input, output, &options->params);
+			break;
+		case 2:
+		case 3:
+			image_format_yuv_planar(input, output, &options->params);
+			break;
+		default:
+			ret = -EINVAL;
+			break;
+		}
+		break;
 	}
 
 	if (ret < 0) {
