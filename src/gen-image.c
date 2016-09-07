@@ -117,6 +117,10 @@ struct params {
 	bool no_chroma_average;
 };
 
+enum histogram_type {
+	HISTOGRAM_HGO,
+};
+
 struct options {
 	const char *input_filename;
 	const char *output_filename;
@@ -136,6 +140,7 @@ struct options {
 	struct params params;
 	bool crop;
 	struct image_rect inputcrop;
+	enum histogram_type histo_type;
 };
 
 /* -----------------------------------------------------------------------------
@@ -1265,7 +1270,7 @@ static int image_lut_3d(const struct image *input, struct image *output,
  * Histogram
  */
 
-static void histogram_compute(const struct image *image, void *histo)
+static void histogram_compute_hgo(const struct image *image, void *histo)
 {
 	const uint8_t *data = image->data;
 	uint8_t comp_min[3] = { 255, 255, 255 };
@@ -1315,13 +1320,25 @@ static void histogram_compute(const struct image *image, void *histo)
 	}
 }
 
-static int histogram(const struct image *image, const char *filename)
+#define HISTOGRAM_HGO_SIZE	(3*4 + 3*4 + 3*64*4)
+
+static int histogram(const struct image *image, const char *filename,
+		     enum histogram_type type)
 {
-	uint8_t data[3*4 + 3*4 + 3*64*4];
+	uint8_t data[HISTOGRAM_HGO_SIZE];
+	size_t size;
 	int ret;
 	int fd;
 
-	histogram_compute(image, data);
+	switch (type) {
+	case HISTOGRAM_HGO:
+		size = HISTOGRAM_HGO_SIZE;
+		histogram_compute_hgo(image, data);
+		break;
+	default:
+		printf("Unknown histogram type\n");
+		return -EINVAL;
+	}
 
 	fd = open(filename, O_WRONLY | O_CREAT,
 		  S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
@@ -1331,12 +1348,12 @@ static int histogram(const struct image *image, const char *filename)
 		return -errno;
 	}
 
-	ret = file_write(fd, data, sizeof(data));
+	ret = file_write(fd, data, size);
 	if (ret < 0)
 		printf("Unable to write histogram: %s (%d)\n",
 		       strerror(-ret), ret);
 	else
-		ftruncate(fd, sizeof(data));
+		ftruncate(fd, size);
 
 	close(fd);
 	return ret;
@@ -1480,7 +1497,7 @@ static int process(const struct options *options)
 
 	/* Compute the histogram */
 	if (options->histo_filename) {
-		ret = histogram(input, options->histo_filename);
+		ret = histogram(input, options->histo_filename, options->histo_type);
 		if (ret)
 			goto done;
 	}
@@ -1635,32 +1652,34 @@ static void usage(const char *argv0)
 	printf("the target format and resolution and store the resulting\n");
 	printf("image in raw binary form\n\n");
 	printf("Supported options:\n");
-	printf("-a, --alpha value	Set the alpha value. Valid syntaxes are floating\n");
-	printf("			point values ([0.0 - 1.0]), fixed point values ([0-255])\n");
-	printf("			or percentages ([0%% - 100%%]). Defaults to 1.0\n");
-	printf("-c, --compose n		Compose n copies of the image offset by (50,50) over a black background\n");
-	printf("-C, --no-chroma-average	Disable chroma averaging for odd pixels on output\n");
-	printf("    --crop (X,Y)/WxH	Crop the input image\n");
-	printf("-e, --encoding enc	Set the YCbCr encoding method. Valid values are\n");
-	printf("			BT.601, REC.709, BT.2020 and SMPTE240M\n");
-	printf("-f, --format format	Set the output image format\n");
-	printf("			Defaults to RGB24 if not specified\n");
-	printf("			Use -f help to list the supported formats\n");
-	printf("-h, --help		Show this help screen\n");
-	printf("    --hflip		Flip the image horizontally\n");
-	printf("-H, --histogram file	Compute histogram on the output image and store it to file\n");
-	printf("-i, --in-format format	Set the input image format\n");
-	printf("			Defaults to RGB24 if not specified\n");
-	printf("			Use -i help to list the supported formats\n");
-	printf("-l, --lut file		Apply 1D Look Up Table from file\n");
-	printf("-L, --clu file		Apply 3D Look Up Table from file\n");
-	printf("-o, --output file	Store the output image to file\n");
-	printf("-q, --quantization q	Set the quantization method. Valid values are\n");
-	printf("			limited or full\n");
-	printf("-r, --rotate		Rotate the image clockwise by 90°\n");
-	printf("-s, --size WxH		Set the output image size\n");
-	printf("			Defaults to the input size if not specified\n");
-	printf("    --vflip		Flip the image vertically\n");
+	printf("-a, --alpha value		Set the alpha value. Valid syntaxes are floating\n");
+	printf("				point values ([0.0 - 1.0]), fixed point values ([0-255])\n");
+	printf("				or percentages ([0%% - 100%%]). Defaults to 1.0\n");
+	printf("-c, --compose n			Compose n copies of the image offset by (50,50) over a black background\n");
+	printf("-C, --no-chroma-average		Disable chroma averaging for odd pixels on output\n");
+	printf("    --crop (X,Y)/WxH		Crop the input image\n");
+	printf("-e, --encoding enc		Set the YCbCr encoding method. Valid values are\n");
+	printf("				BT.601, REC.709, BT.2020 and SMPTE240M\n");
+	printf("-f, --format format		Set the output image format\n");
+	printf("				Defaults to RGB24 if not specified\n");
+	printf("				Use -f help to list the supported formats\n");
+	printf("-h, --help			Show this help screen\n");
+	printf("    --hflip			Flip the image horizontally\n");
+	printf("-H, --histogram file		Compute histogram on the output image and store it to file\n");
+	printf("    --histogram-type type	Set the histogram type. Valid values are hgo.\n");
+	printf("				Defaults to hgo if not specified\n");
+	printf("-i, --in-format format		Set the input image format\n");
+	printf("				Defaults to RGB24 if not specified\n");
+	printf("				Use -i help to list the supported formats\n");
+	printf("-l, --lut file			Apply 1D Look Up Table from file\n");
+	printf("-L, --clu file			Apply 3D Look Up Table from file\n");
+	printf("-o, --output file		Store the output image to file\n");
+	printf("-q, --quantization q		Set the quantization method. Valid values are\n");
+	printf("				limited or full\n");
+	printf("-r, --rotate			Rotate the image clockwise by 90°\n");
+	printf("-s, --size WxH			Set the output image size\n");
+	printf("				Defaults to the input size if not specified\n");
+	printf("    --vflip			Flip the image vertically\n");
 }
 
 static void list_formats(void)
@@ -1671,9 +1690,10 @@ static void list_formats(void)
 		printf("%s\n", format_info[i].name);
 }
 
-#define OPT_HFLIP	256
-#define OPT_VFLIP	257
-#define OPT_CROP	258
+#define OPT_HFLIP		256
+#define OPT_VFLIP		257
+#define OPT_CROP		258
+#define OPT_HISTOGRAM_TYPE	259
 
 static struct option opts[] = {
 	{"alpha", 1, 0, 'a'},
@@ -1685,6 +1705,7 @@ static struct option opts[] = {
 	{"help", 0, 0, 'h'},
 	{"hflip", 0, 0, OPT_HFLIP},
 	{"histogram", 1, 0, 'H'},
+	{"histogram-type", 1, 0, OPT_HISTOGRAM_TYPE},
 	{"in-format", 1, 0, 'i'},
 	{"lut", 1, 0, 'l'},
 	{"no-chroma-average", 1, 0, 'C'},
@@ -1819,6 +1840,7 @@ static int parse_args(struct options *options, int argc, char *argv[])
 	options->params.alpha = 255;
 	options->params.encoding = V4L2_YCBCR_ENC_601;
 	options->params.quantization = V4L2_QUANTIZATION_LIM_RANGE;
+	options->histo_type = HISTOGRAM_HGO;
 
 	opterr = 0;
 	while ((c = getopt_long(argc, argv, "a:c:Ce:f:hH:i:l:L:o:q:rs:", opts, NULL)) != -1) {
@@ -1909,7 +1931,6 @@ static int parse_args(struct options *options, int argc, char *argv[])
 				printf("Unsupported input format '%s'\n", optarg);
 				return 1;
 			}
-
 			break;
 
 		case 'l':
@@ -1974,6 +1995,15 @@ static int parse_args(struct options *options, int argc, char *argv[])
 			}
 
 			options->crop = true;
+			break;
+
+		case OPT_HISTOGRAM_TYPE:
+			if (!strcmp(optarg, "hgo")) {
+				options->histo_type = HISTOGRAM_HGO;
+			} else {
+				printf("Invalid histogram type '%s'\n", optarg);
+				return 1;
+			}
 			break;
 
 		default:
