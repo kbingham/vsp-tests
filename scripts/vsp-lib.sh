@@ -87,29 +87,45 @@ vsp1_set_control() {
 
 reference_frame() {
 	local file=$1
-	local format=$2
-	local size=$3
-	shift 3
+	local in_format=$2
+	local out_format=$3
+	local size=$4
+	shift 4
 
 	local alpha=
 	local options=
 
-	case $format in
+	# Start with the input format to compute the alpha value being used by
+	# the RPF after unpacking. Keep in sync with generate_input_frame.
+	case $in_format in
 	ARGB555)
+		# The 1-bit alpha value is expanded to 8 bits by copying the
+		# high order bits, resulting in value of 255 after unpacking.
 		alpha=255
 		;;
 	ABGR32 | ARGB32)
+		# 8-bit alpha value, hardcoded to 200.
 		alpha=200
 		;;
-	XRGB555)
-		# XRGB555 has the X bit hardcoded to 0
-		alpha=0
-		;;
-	XBGR32 | XRGB32)
-		# The X bits are configurable with a default value of 255
+	*)
+		# In all other cases the alpha value is set through a control
+		# whose default value is 255.
 		alpha=255
 		;;
+	esac
+
+	# Convert the input alpha value based on the output format.
+	case $out_format in
+	ARGB555 | ABGR32 | ARGB32)
+		# Pass the 8-bit alpha value unchanged to the image generator.
+		;;
+	XRGB555)
+		# The format has the X bit hardcoded to 0.
+		alpha=0
+		;;
 	*)
+		# In all other cases the alpha value is set through a control
+		# whose default value is 255.
 		alpha=255
 		;;
 	esac
@@ -139,9 +155,9 @@ reference_frame() {
 	done
 
 	[ x$__vsp_bru_inputs != x ] && options="$options -c $__vsp_bru_inputs"
-	$(format_v4l2_is_yuv $format) && options="$options -y"
+	$(format_v4l2_is_yuv $out_format) && options="$options -y"
 
-	$genimage -f $format -s $size -a $alpha $options -o $file \
+	$genimage -f $out_format -s $size -a $alpha $options -o $file \
 		frames/frame-reference-1024x768.pnm
 }
 
@@ -233,7 +249,7 @@ compare_frames() {
 		method=fuzzy
 	fi
 
-	reference_frame ${frames_dir}ref-frame.bin $out_format $size $args
+	reference_frame ${frames_dir}ref-frame.bin $in_format $out_format $size $args
 
 	local result="pass"
 	local params=${args// /-}
