@@ -92,6 +92,7 @@ struct params {
 	unsigned int alpha;
 	enum v4l2_ycbcr_encoding encoding;
 	enum v4l2_quantization quantization;
+	bool no_chroma_average;
 };
 
 struct options {
@@ -539,8 +540,14 @@ static void image_format_yuv_packed(const struct image *input, struct image *out
 		for (x = 0; x < output->width; x += 2) {
 			o_y[2*x] = idata[3*x];
 			o_y[2*x + 2] = idata[3*x + 3];
-			o_c[2*x + u_offset] = (idata[3*x + 1] + idata[3*x + 4]) / 2;
-			o_c[2*x + v_offset] = (idata[3*x + 2] + idata[3*x + 5]) / 2;
+
+			if (params->no_chroma_average) {
+				o_c[2*x + u_offset] = idata[3*x + 1];
+				o_c[2*x + v_offset] = idata[3*x + 2];
+			} else {
+				o_c[2*x + u_offset] = (idata[3*x + 1] + idata[3*x + 4]) / 2;
+				o_c[2*x + v_offset] = (idata[3*x + 2] + idata[3*x + 5]) / 2;
+			}
 		}
 
 		o_y += input->width * 2;
@@ -587,7 +594,7 @@ static void image_format_yuv_planar(const struct image *input, struct image *out
 
 	idata = input->data;
 	for (y = 0; y < output->height / ysub; ++y) {
-		if (xsub == 1) {
+		if (xsub == 1 || params->no_chroma_average) {
 			for (x = 0; x < output->width; x += xsub) {
 				o_u[x*c_stride/xsub] = idata[3*x + 1];
 				o_v[x*c_stride/xsub] = idata[3*x + 2];
@@ -1372,6 +1379,7 @@ static void usage(const char *argv0)
 	printf("			point values ([0.0 - 1.0]), fixed point values ([0-255])\n");
 	printf("			or percentages ([0%% - 100%%]). Defaults to 1.0\n");
 	printf("-c, --compose n		Compose n copies of the image offset by (50,50) over a black background\n");
+	printf("-C, --no-chroma-average	Disable chroma averaging for odd pixels on output\n");
 	printf("-e, --encoding enc	Set the YCbCr encoding method. Valid values are\n");
 	printf("			BT.601, REC.709, BT.2020 and SMPTE240M\n");
 	printf("-f, --format format	Set the output image format\n");
@@ -1416,6 +1424,7 @@ static struct option opts[] = {
 	{"histogram", 1, 0, 'H'},
 	{"in-format", 1, 0, 'i'},
 	{"lut", 1, 0, 'l'},
+	{"no-chroma-average", 1, 0, 'C'},
 	{"output", 1, 0, 'o'},
 	{"quantization", 1, 0, 'q'},
 	{"rotate", 0, 0, 'r'},
@@ -1442,7 +1451,7 @@ static int parse_args(struct options *options, int argc, char *argv[])
 	options->params.quantization = V4L2_QUANTIZATION_LIM_RANGE;
 
 	opterr = 0;
-	while ((c = getopt_long(argc, argv, "a:c:e:f:hH:i:l:L:o:q:rs:", opts, NULL)) != -1) {
+	while ((c = getopt_long(argc, argv, "a:c:Ce:f:hH:i:l:L:o:q:rs:", opts, NULL)) != -1) {
 
 		switch (c) {
 		case 'a': {
@@ -1475,6 +1484,10 @@ static int parse_args(struct options *options, int argc, char *argv[])
 				printf("Invalid compose value '%s'\n", optarg);
 				return 1;
 			  }
+			  break;
+
+		case 'C':
+			  options->params.no_chroma_average = true;
 			  break;
 
 		case 'e':
