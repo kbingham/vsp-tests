@@ -220,10 +220,12 @@ compare_frame_fuzzy() {
 
 compare_frames() {
 	local args=$*
-	local format=$__vsp_wpf_format
+	local in_format=$__vsp_rpf_format
+	local out_format=$__vsp_wpf_format
 	local wpf=$__vsp_wpf_index
 
-	local fmt=$(echo $format | tr '[:upper:]' '[:lower:]')
+	local in_fmt=$(echo $in_format | tr '[:upper:]' '[:lower:]')
+	local out_fmt=$(echo $out_format | tr '[:upper:]' '[:lower:]')
 	local size=$(vsp1_entity_get_size wpf.$wpf 1)
 	local method=exact
 
@@ -231,16 +233,16 @@ compare_frames() {
 		method=fuzzy
 	fi
 
-	reference_frame ${frames_dir}ref-frame.bin $format $size $args
+	reference_frame ${frames_dir}ref-frame.bin $out_format $size $args
 
 	local result="pass"
 	local params=${args// /-}
 	params=${params:+-$params}
 	params=${params//\//_}
-	params=$fmt-$size$params
+	params=$in_fmt-$out_fmt-$size$params
 
 	for frame in ${frames_dir}frame-*.bin ; do
-		(compare_frame_$method $format $size $frame ${frames_dir}ref-frame.bin) || {
+		(compare_frame_$method $out_format $size $frame ${frames_dir}ref-frame.bin) || {
 			mv $frame ${0/.sh/}-$(basename ${frame/.bin/-$params.bin}) ;
 			result="fail"
 		}
