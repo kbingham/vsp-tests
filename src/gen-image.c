@@ -715,6 +715,7 @@ static void colorspace_rgb2ycbcr(int m[3][3],
 
 static void image_colorspace_rgb_to_yuv(const struct image *input,
 					struct image *output,
+					const struct format_info *format,
 					const struct params *params)
 {
 	int matrix[3][3];
@@ -727,10 +728,17 @@ static void image_colorspace_rgb_to_yuv(const struct image *input,
 
 	for (y = 0; y < output->height; ++y) {
 		for (x = 0; x < output->width; ++x) {
-			colorspace_rgb2ycbcr(matrix, params->quantization, idata, odata);
-			idata += 3;
-			odata += 3;
+			colorspace_rgb2ycbcr(matrix, params->quantization,
+					     &idata[3*x], &odata[3*x]);
 		}
+		if (format->yuv.xsub == 2) {
+			for (x = 1; x < output->width - 1; x += 2) {
+				odata[3*x + 1] = (odata[3*(x-1) + 1] + odata[3*(x+1) + 1]) / 2;
+				odata[3*x + 2] = (odata[3*(x-1) + 2] + odata[3*(x+1) + 2]) / 2;
+			}
+		}
+		idata += 3 * output->width;
+		odata += 3 * output->width;
 	}
 }
 
@@ -1158,7 +1166,8 @@ static int process(const struct options *options)
 			goto done;
 		}
 
-		image_colorspace_rgb_to_yuv(input, yuv, &options->params);
+		image_colorspace_rgb_to_yuv(input, yuv, options->input_format,
+					    &options->params);
 		image_delete(input);
 		input = yuv;
 	} else if (options->input_format->rgb.bpp < 24) {
@@ -1300,7 +1309,8 @@ static int process(const struct options *options)
 			goto done;
 		}
 
-		image_colorspace_rgb_to_yuv(input, converted, &options->params);
+		image_colorspace_rgb_to_yuv(input, converted, format,
+					    &options->params);
 		image_delete(input);
 		input = converted;
 	}
