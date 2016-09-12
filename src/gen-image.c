@@ -101,11 +101,11 @@ struct options {
 	const char *clu_filename;
 	const char *lut_filename;
 
+	const struct format_info *input_format;
 	const struct format_info *output_format;
 	unsigned int output_height;
 	unsigned int output_width;
 
-	bool process_yuv;
 	bool hflip;
 	bool vflip;
 	bool rotate;
@@ -727,6 +727,28 @@ static void image_colorspace_rgb_to_yuv(const struct image *input,
 	}
 }
 
+static void image_convert_rgb_to_rgb(const struct image *input,
+				     struct image *output,
+				     const struct format_info *format)
+{
+	const uint8_t *idata = input->data;
+	uint8_t *odata = output->data;
+	unsigned int x;
+	unsigned int y;
+	uint8_t r, g, b;
+
+	for (y = 0; y < output->height; ++y) {
+		for (x = 0; x < output->width; ++x) {
+			r = *idata++ & (0xff << (8 - format->rgb.red.length));
+			g = *idata++ & (0xff << (8 - format->rgb.green.length));
+			b = *idata++ & (0xff << (8 - format->rgb.blue.length));
+			*odata++ = r;
+			*odata++ = g;
+			*odata++ = b;
+		}
+	}
+}
+
 /* -----------------------------------------------------------------------------
  * Image scaling
  */
@@ -1119,7 +1141,7 @@ static int process(const struct options *options)
 	}
 
 	/* Convert colorspace */
-	if (options->process_yuv) {
+	if (options->input_format->is_yuv) {
 		struct image *yuv;
 
 		yuv = image_new(format_by_name("YUV24"), input->width,
@@ -1132,6 +1154,19 @@ static int process(const struct options *options)
 		image_colorspace_rgb_to_yuv(input, yuv, &options->params);
 		image_delete(input);
 		input = yuv;
+	} else if (options->input_format->rgb.bpp < 24) {
+		struct image *rgb;
+
+		rgb = image_new(format_by_name("RGB24"), input->width,
+				input->height);
+		if (!rgb) {
+			ret = -ENOMEM;
+			goto done;
+		}
+
+		image_convert_rgb_to_rgb(input, rgb, options->input_format);
+		image_delete(input);
+		input = rgb;
 	}
 
 	/* Scale */
@@ -1345,6 +1380,9 @@ static void usage(const char *argv0)
 	printf("-h, --help		Show this help screen\n");
 	printf("    --hflip		Flip the image horizontally\n");
 	printf("-H, --histogram file	Compute histogram on the output image and store it to file\n");
+	printf("-i, --in-format format	Set the input image format\n");
+	printf("			Defaults to RGB24 if not specified\n");
+	printf("			Use -i help to list the supported formats\n");
 	printf("-l, --lut file		Apply 1D Look Up Table from file\n");
 	printf("-L, --clu file		Apply 3D Look Up Table from file\n");
 	printf("-o, --output file	Store the output image to file\n");
@@ -1354,7 +1392,6 @@ static void usage(const char *argv0)
 	printf("-s, --size WxH		Set the output image size\n");
 	printf("			Defaults to the input size if not specified\n");
 	printf("    --vflip		Flip the image vertically\n");
-	printf("-y, --yuv		Perform all processing in YUV space\n");
 }
 
 static void list_formats(void)
@@ -1377,13 +1414,13 @@ static struct option opts[] = {
 	{"help", 0, 0, 'h'},
 	{"hflip", 0, 0, OPT_HFLIP},
 	{"histogram", 1, 0, 'H'},
+	{"in-format", 1, 0, 'i'},
 	{"lut", 1, 0, 'l'},
 	{"output", 1, 0, 'o'},
 	{"quantization", 1, 0, 'q'},
 	{"rotate", 0, 0, 'r'},
 	{"size", 1, 0, 's'},
 	{"vflip", 0, 0, OPT_VFLIP},
-	{"yuv", 0, 0, 'y'},
 	{0, 0, 0, 0}
 };
 
@@ -1398,13 +1435,14 @@ static int parse_args(struct options *options, int argc, char *argv[])
 	}
 
 	memset(options, 0, sizeof(*options));
+	options->input_format = format_by_name("RGB24");
 	options->output_format = format_by_name("RGB24");
 	options->params.alpha = 255;
 	options->params.encoding = V4L2_YCBCR_ENC_601;
 	options->params.quantization = V4L2_QUANTIZATION_LIM_RANGE;
 
 	opterr = 0;
-	while ((c = getopt_long(argc, argv, "a:c:e:f:hH:l:L:o:q:rs:y", opts, NULL)) != -1) {
+	while ((c = getopt_long(argc, argv, "a:c:e:f:hH:i:l:L:o:q:rs:", opts, NULL)) != -1) {
 
 		switch (c) {
 		case 'a': {
@@ -1477,6 +1515,20 @@ static int parse_args(struct options *options, int argc, char *argv[])
 			options->histo_filename = optarg;
 			break;
 
+		case 'i':
+			if (!strcmp("help", optarg)) {
+				list_formats();
+				return 1;
+			}
+
+			options->input_format = format_by_name(optarg);
+			if (!options->input_format) {
+				printf("Unsupported input format '%s'\n", optarg);
+				return 1;
+			}
+
+			break;
+
 		case 'l':
 			options->lut_filename = optarg;
 			break;
@@ -1518,10 +1570,6 @@ static int parse_args(struct options *options, int argc, char *argv[])
 				printf("Invalid size '%s'\n", optarg);
 				return 1;
 			}
-			break;
-
-		case 'y':
-			options->process_yuv = true;
 			break;
 
 		case OPT_HFLIP:
