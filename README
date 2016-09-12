@@ -56,3 +56,9 @@ Running the Tests
 The test scripts are named vsp-unit-test-[0-9]*.sh. They can be run directly
 from the test suite root directory.
 
+Test options:
+
+- VSP_KEEP_FRAMES: When the VSP_KEEP_FRAMES environment variable is set to 1,
+  all frame files will be preserved regardless of the tests results. Otherwise
+  frame files for successful tests are removed.
+

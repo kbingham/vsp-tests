@@ -254,13 +254,19 @@ compare_frames() {
 	params=$in_fmt-$out_fmt-$size$params
 
 	for frame in ${frames_dir}frame-*.bin ; do
-		(compare_frame_$method $out_format $size $frame ${frames_dir}ref-frame.bin) || {
-			mv $frame ${0/.sh/}-$(basename ${frame/.bin/-$params.bin}) ;
-			result="fail"
+		local match="true"
+
+		(compare_frame_$method $out_format $size $frame ${frames_dir}ref-frame.bin) ||  {
+			match="false" ;
+			result="fail" ;
 		}
+
+		if [ $match = "false" -o x$VSP_KEEP_FRAMES = x1 ] ; then
+			mv $frame ${0/.sh/}-$(basename ${frame/.bin/-$params.bin})
+		fi
 	done
 
-	if [ $result = "fail" ] ; then
+	if [ x$VSP_KEEP_FRAMES = x1 -o $result = "fail" ] ; then
 		mv ${frames_dir}ref-frame.bin ${0/.sh/}-ref-frame-$params.bin
 	else
 		rm -f ${frames_dir}ref-frame.bin
