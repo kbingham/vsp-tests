@@ -155,9 +155,8 @@ reference_frame() {
 	done
 
 	[ x$__vsp_bru_inputs != x ] && options="$options -c $__vsp_bru_inputs"
-	$(format_v4l2_is_yuv $out_format) && options="$options -y"
 
-	$genimage -f $out_format -s $size -a $alpha $options -o $file \
+	$genimage -i $in_format -f $out_format -s $size -a $alpha $options -o $file \
 		frames/frame-reference-1024x768.pnm
 }
 
@@ -166,10 +165,7 @@ reference_histogram() {
 	local format=$2
 	local size=$3
 
-	local yuv=
-	$(format_v4l2_is_yuv $format) && yuv="-y"
-
-	$genimage -f $format $yuv -s $size -H $file \
+	$genimage -i $format -f $format -s $size -H $file \
 		frames/frame-reference-1024x768.pnm
 }
 
@@ -657,7 +653,7 @@ generate_input_frame() {
 		;;
 	esac
 
-	$(format_v4l2_is_yuv $format) && options="$options -y"
+	$(format_v4l2_is_yuv $format) && options="$options -i YUV444M"
 
 	$genimage -f $format -s $size -a $alpha $options -o $file \
 		frames/frame-reference-1024x768.pnm
