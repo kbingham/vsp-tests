@@ -77,7 +77,7 @@ test_flipping() {
 	test_start "$label"
 
 	pipe_configure rpf-wpf 0 0
-	format_configure rpf-wpf 0 0 $format 1024x768 $format
+	format_configure rpf-wpf 0 0 $format 640x480 $format
 
 	vsp_runner rpf.0 &
 	vsp_runner wpf.0
