@@ -653,7 +653,7 @@ generate_input_frame() {
 		;;
 	esac
 
-	$(format_v4l2_is_yuv $format) && options="$options -i YUV444M"
+	$(format_v4l2_is_yuv $format) && options="$options -C -i YUV444M"
 
 	$genimage -f $format -s $size -a $alpha $options -o $file \
 		frames/frame-reference-1024x768.pnm
