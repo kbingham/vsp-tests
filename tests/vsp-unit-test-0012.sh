@@ -79,6 +79,11 @@ test_main() {
 		}
 	done
 
+	# Reset the rotation control to avoid interfering with the test
+	$(vsp1_has_feature "wpf.0[control:'Rotate']") && {
+		vsp1_set_control wpf.0 Rotate 0
+	}
+
 	local directions=$supported_directions
 
 	for direction in $directions ; do
