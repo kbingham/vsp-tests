@@ -397,6 +397,14 @@ pipe_rpf_uds_bru() {
 	__vsp_wpf_index=0
 }
 
+pipe_rpf_sru() {
+	$mediactl -d $mdev -l "'$dev rpf.0':1 -> '$dev sru':0 [1]"
+	$mediactl -d $mdev -l "'$dev sru':1 -> '$dev wpf.0':0 [1]"
+	$mediactl -d $mdev -l "'$dev wpf.0':1 -> '$dev wpf.0 output':0 [1]"
+
+	__vsp_wpf_index=0
+}
+
 pipe_rpf_wpf() {
 	local rpf=$1
 	local wpf=$2
@@ -582,6 +590,23 @@ format_rpf_uds_bru() {
 	$mediactl -d $mdev -V "'$dev uds.0':1 [fmt:$infmt/$outsize]"
 	$mediactl -d $mdev -V "'$dev bru':0 [fmt:$infmt/$outsize]"
 	$mediactl -d $mdev -V "'$dev bru':$bru_output [fmt:$infmt/$outsize]"
+	$mediactl -d $mdev -V "'$dev wpf.0':0 [fmt:$infmt/$outsize]"
+	$mediactl -d $mdev -V "'$dev wpf.0':1 [fmt:$outfmt/$outsize]"
+
+	[ $insize != $outsize ] && __vsp_uds_scale=true
+	__vsp_rpf_format=$1
+	__vsp_wpf_format=$3
+}
+
+format_rpf_sru() {
+	local infmt=$(format_v4l2_to_mbus $1)
+	local insize=$2
+	local outfmt=$(format_v4l2_to_mbus $3)
+	local outsize=$4
+
+	$mediactl -d $mdev -V "'$dev rpf.0':0 [fmt:$infmt/$insize]"
+	$mediactl -d $mdev -V "'$dev sru':0 [fmt:$infmt/$insize]"
+	$mediactl -d $mdev -V "'$dev sru':1 [fmt:$infmt/$outsize]"
 	$mediactl -d $mdev -V "'$dev wpf.0':0 [fmt:$infmt/$outsize]"
 	$mediactl -d $mdev -V "'$dev wpf.0':1 [fmt:$outfmt/$outsize]"
 
