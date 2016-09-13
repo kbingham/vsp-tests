@@ -51,7 +51,7 @@ test_flipping() {
 	vsp_runner wpf.0 --count=6 --skip=0 --buffers=1 --pause=3 &
 
 	vsp_runner_wait wpf.0
-	result=$(compare_frames $label=0)
+	local result=$(compare_frames $label=0)
 
 	[ $result = fail ] && {
 		test_complete $result ;
@@ -71,6 +71,7 @@ test_flipping() {
 test_main() {
 	# Check the supported directions and reset the associated controls
 	local supported_directions
+	local direction
 
 	for direction in $directions ; do
 		$(vsp1_has_feature "wpf.0[control:'$(get_var $direction control)']") && {

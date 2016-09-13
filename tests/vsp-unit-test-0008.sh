@@ -11,10 +11,11 @@ features="bru rpf.0 uds wpf.0"
 formats="RGB24 YUV444M"
 
 test_scale() {
-	format=$1
-	insize=$2
-	outsize=$3
-	order=$4
+	local format=$1
+	local insize=$2
+	local outsize=$3
+	local order=$4
+	local pipe
 
 	if [ $order = 'after' ] ; then
 		pipe=rpf-bru-uds
@@ -30,12 +31,14 @@ test_scale() {
 	vsp_runner rpf.0 &
 	vsp_runner wpf.0
 
-	result=$(compare_frames)
+	local result=$(compare_frames)
 
 	test_complete $result
 }
 
 test_main() {
+	local format
+
 	for format in $formats ; do
 		test_scale $format 1024x768 640x480 before
 		test_scale $format 640x480 1024x768 before

@@ -20,12 +20,14 @@ test_histogram() {
 	vsp_runner rpf.0 &
 	vsp_runner wpf.0
 
-	result=$(compare_histograms)
+	local result=$(compare_histograms)
 
 	test_complete $result
 }
 
 test_main() {
+	local format
+
 	for format in $formats ; do
 		test_histogram $format
 	done

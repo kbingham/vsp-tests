@@ -12,7 +12,7 @@ optional_features="wpf.1 wpf.2 wpf.3"
 format=RGB24
 
 test_wpf() {
-	wpf=$1
+	local wpf=$1
 
 	test_start "WPF.$wpf"
 
@@ -22,13 +22,14 @@ test_wpf() {
 	vsp_runner rpf.0 &
 	vsp_runner wpf.$wpf
 
-	result=$(compare_frames)
+	local result=$(compare_frames)
 
 	test_complete $result
 }
 
 test_main() {
-	num_wpfs=$(vsp1_count_wpfs)
+	local num_wpfs=$(vsp1_count_wpfs)
+	local wpf
 
 	for wpf in `seq 0 1 $((num_wpfs-1))` ; do
 		test_wpf $wpf

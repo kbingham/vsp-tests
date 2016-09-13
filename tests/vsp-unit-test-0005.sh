@@ -12,7 +12,7 @@ optional_features="rpf.2 rpf.3 rpf.4"
 format=RGB24
 
 test_rpf() {
-	rpf=$1
+	local rpf=$1
 
 	test_start "RPF.$rpf"
 
@@ -22,13 +22,14 @@ test_rpf() {
 	vsp_runner rpf.$rpf &
 	vsp_runner wpf.0
 
-	result=$(compare_frames)
+	local result=$(compare_frames)
 
 	test_complete $result
 }
 
 test_main() {
-	num_rpfs=$(vsp1_count_rpfs)
+	local num_rpfs=$(vsp1_count_rpfs)
+	local rpf
 
 	for rpf in `seq 0 1 $((num_rpfs-1))` ; do
 		test_rpf $rpf

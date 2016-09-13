@@ -19,13 +19,13 @@ clu_configs="zero identity wave"
 lut_configs="zero identity gamma"
 
 test_lut() {
-	lut_type=$1
-	format=$2
-	config=$3
+	local lut_type=$1
+	local format=$2
+	local config=$3
 
 	test_start "$(echo $lut_type | tr [:lower:] [:upper:]) in $format with $config configuration"
 
-	config_file=frames/${lut_type}-${config}.bin
+	local config_file=frames/${lut_type}-${config}.bin
 
 	pipe_configure rpf-${lut_type}
 	format_configure rpf-${lut_type} $format 1024x768
@@ -35,14 +35,18 @@ test_lut() {
 	vsp_runner rpf.0 &
 	vsp_runner wpf.0
 
-	result=$(compare_frames $lut_type=$config_file)
+	local result=$(compare_frames $lut_type=$config_file)
 
 	test_complete $result
 }
 
 test_main() {
+	local lut
+	local format
+	local config
+
 	for lut in $lut_types ; do
-		configs=$(eval echo \$${lut}_configs)
+		local configs=$(eval echo \$${lut}_configs)
 		for format in $formats ; do
 			for config in $configs ; do
 				test_lut $lut $format $config

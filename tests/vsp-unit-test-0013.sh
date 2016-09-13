@@ -20,12 +20,14 @@ test_rpf_unpacking() {
 	vsp_runner rpf.0 &
 	vsp_runner wpf.0
 
-	result=$(compare_frames)
+	local result=$(compare_frames)
 
 	test_complete $result
 }
 
 test_main() {
+	local format
+
 	for format in $formats ; do
 		test_rpf_unpacking $format
 	done

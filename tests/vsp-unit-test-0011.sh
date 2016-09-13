@@ -82,12 +82,14 @@ test_flipping() {
 	vsp_runner rpf.0 &
 	vsp_runner wpf.0
 
-	result=$(compare_frames $label)
+	local result=$(compare_frames $label)
 
 	test_complete $result
 }
 
 test_main() {
+	local direction
+
 	for direction in $directions ; do
 		$(vsp1_has_feature "wpf.0[control:'$(get_var $direction control)']") && {
 			set_var $direction index 0
@@ -100,12 +102,12 @@ test_main() {
 
 	while true ; do
 		# Update all controls
-		label=
+		local label=
 		for direction in $supported_directions ; do
 			local index=$(get_var $direction index)
 			local values=$(get_var $direction values)
 			local value=$(get_array_value "$values" $index)
-			local label="$label $(get_var $direction label)=$value"
+			label="$label $(get_var $direction label)=$value"
 			dir_set_flipping_control $direction
 		done
 
