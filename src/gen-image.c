@@ -46,6 +46,8 @@ do {	\
 	(b) = __tmp;			\
 } while (0)
 
+#define div_round_up(n, d)	(((n) + (d) - 1) / (d))
+
 enum format_type {
 	FORMAT_RGB,
 	FORMAT_YUV,
@@ -119,6 +121,7 @@ struct params {
 
 enum histogram_type {
 	HISTOGRAM_HGO,
+	HISTOGRAM_HGT,
 };
 
 struct options {
@@ -141,6 +144,7 @@ struct options {
 	bool crop;
 	struct image_rect inputcrop;
 	enum histogram_type histo_type;
+	uint8_t histo_areas[12];
 };
 
 /* -----------------------------------------------------------------------------
@@ -1320,11 +1324,162 @@ static void histogram_compute_hgo(const struct image *image, void *histo)
 	}
 }
 
+static void histogram_compute_hgt(const struct image *image, void *histo,
+				  const uint8_t hue_areas[12])
+{
+	const uint8_t *data = image->data;
+	uint8_t hue_indices[256];
+	uint8_t smin = 255, smax = 0;
+	uint32_t sum = 0;
+	uint32_t hist[6][32];
+	unsigned int hue_index;
+	unsigned int x, y;
+	unsigned int h;
+
+	memset(hist, 0, sizeof(hist));
+
+	/*
+	 * Precompute the hue region index for all possible hue values. The
+	 * index starts at 0 for the overlapping region between hue areas 5
+	 * and 0.
+	 *
+	 * Hue area 0 can wrap around the H value space (for example include
+	 * values greater than 240 and lower than 30) depending on whether 0L
+	 * is higher than 5U or lower than 0U.
+	 *
+	 *              Area 0       Area 1       Area 2       Area 3       Area 4       Area 5       Area 0
+	 *             ________     ________     ________     ________     ________     ________     _____
+	 *        \   /|      |\   /|      |\   /|      |\   /|      |\   /|      |\   /|      |\   /|
+	 *         \ / |      | \ / |      | \ / |      | \ / |      | \ / |      | \ / |      | \ / |
+	 *          X  |      |  X  |      |  X  |      |  X  |      |  X  |      |  X  |      |  X  |
+	 *         / \ |      | / \ |      | / \ |      | / \ |      | / \ |      | / \ |      | / \ |
+	 *        /   \|      |/   \|      |/   \|      |/   \|      |/   \|      |/   \|      |/   \|
+	 *       5U   0L      0U   1L      1U   2L      2U   3L      3U   4L      4U   5L      5U   0L
+	 * RI   ]  0  ]   1  ]  2  ]   3  ]  4  ]   5  ]  6  ]   7  ]  8  ]   9  ]  10 ]  11  ]  0  ]   1
+	 *
+	 * NW  ..255><0.................................Hue Value..............................255><0.......
+	 * W   .......255><0.................................Hue Value..............................255><0..
+	 *
+	 * RI: Hue region index
+	 * W:  Area 0 wraps around the hue value space
+	 * NW: Area 0 doesn't wrap around the hue value space
+	 *
+	 * Boundary values are included in the lower-value region.
+	 */
+
+	/*
+	 * The first hue value after 5U falls in region index 0. However, if
+	 * 5U == 0L, areas 5 and 0 don't overlap, region index 0 is empty and
+	 * the first hue value falls in region index 1.
+	 *
+	 * Process the ]5U, 255] range first, followed by the [0, 5U] range.
+	 */
+	hue_index = hue_areas[11] == hue_areas[0] ? 1 : 0;
+
+	for (h = hue_areas[11] + 1; h <= 255; ++h) {
+		hue_indices[h] = hue_index;
+
+		if (h == hue_areas[hue_index])
+			hue_index++;
+	}
+
+	for (h = 0; h <= hue_areas[11]; ++h) {
+		hue_indices[h] = hue_index;
+
+		while (h == hue_areas[hue_index])
+			hue_index++;
+	}
+
+	/* Compute the histogram */
+	for (y = 0; y < image->height; ++y) {
+		for (x = 0; x < image->width; ++x) {
+			uint8_t rgb[3], hsv[3];
+			unsigned int hist_n;
+
+			rgb[0] = *data++;
+			rgb[1] = *data++;
+			rgb[2] = *data++;
+
+			hst_rgb_to_hsv(rgb, hsv);
+
+			smin = min(smin, hsv[1]);
+			smax = max(smax, hsv[1]);
+			sum += hsv[1];
+
+			/* Compute the coordinates of the histogram bucket */
+			hist_n = hsv[1] / 8;
+			hue_index = hue_indices[hsv[0]];
+
+			/*
+			 * Attribute the H value to area(s). If the H value is
+			 * inside one of the non-overlapping regions (hue_index
+			 * is odd) the max weight (16) is attributed to the
+			 * corresponding area. Otherwise the weight is split
+			 * between the two adjacent areas based on the distance
+			 * between the H value and the areas boundaries.
+			 */
+			if (hue_index % 2) {
+				hist[hue_index/2][hist_n] += 16;
+			} else {
+				unsigned int dist, width, weight;
+				unsigned int hue_index1, hue_index2;
+				int hue1, hue2;
+
+				hue_index1 = hue_index ? hue_index - 1 : 11;
+				hue_index2 = hue_index;
+
+				hue1 = hue_areas[hue_index1];
+				hue2 = hue_areas[hue_index2];
+
+				/*
+				 * Calculate the width to be attributed to the
+				 * left area. Handle the wraparound through
+				 * modulo arithmetic.
+				 */
+				dist = (hue2 - hsv[0]) & 255;
+				width = (hue2 - hue1) & 255;
+				weight = div_round_up(dist * 16, width);
+
+				/* Split weight between the two areas */
+				hist[hue_index1/2][hist_n] += weight;
+				hist[hue_index2/2][hist_n] += 16 - weight;
+			}
+		}
+	}
+
+	/* Format the data buffer */
+
+	/* Min/Max Value of S Components */
+	*(uint8_t *)histo++ = smin;
+	*(uint8_t *)histo++ = 0;
+	*(uint8_t *)histo++ = smax;
+	*(uint8_t *)histo++ = 0;
+
+	/* Sum of S Components */
+	*(uint32_t *)histo = sum;
+	histo += 4;
+
+	/* Weighted Frequency of Hue Area-m and Saturation Area-n */
+	for (x = 0; x < 6; x++) {
+		for (y = 0; y < 32; y++) {
+			*(uint32_t *)histo = hist[x][y];
+			histo += 4;
+		}
+	}
+}
+
 #define HISTOGRAM_HGO_SIZE	(3*4 + 3*4 + 3*64*4)
+#define HISTOGRAM_HGT_SIZE	(1*4 + 1*4 + 6*32*4)
 
 static int histogram(const struct image *image, const char *filename,
-		     enum histogram_type type)
+		     enum histogram_type type, const uint8_t hgt_hue_areas[12])
 {
+	/*
+	 * Data must be big enough to contain the largest possible histogram.
+	 *
+	 * HGO: (3 + 3 + 3*64) * 4 = 792
+	 * HGT: (1 + 1 + 6*32) * 4 = 776
+	 */
 	uint8_t data[HISTOGRAM_HGO_SIZE];
 	size_t size;
 	int ret;
@@ -1334,6 +1489,10 @@ static int histogram(const struct image *image, const char *filename,
 	case HISTOGRAM_HGO:
 		size = HISTOGRAM_HGO_SIZE;
 		histogram_compute_hgo(image, data);
+		break;
+	case HISTOGRAM_HGT:
+		size = HISTOGRAM_HGT_SIZE;
+		histogram_compute_hgt(image, data, hgt_hue_areas);
 		break;
 	default:
 		printf("Unknown histogram type\n");
@@ -1497,7 +1656,8 @@ static int process(const struct options *options)
 
 	/* Compute the histogram */
 	if (options->histo_filename) {
-		ret = histogram(input, options->histo_filename, options->histo_type);
+		ret = histogram(input, options->histo_filename, options->histo_type,
+				options->histo_areas);
 		if (ret)
 			goto done;
 	}
@@ -1666,7 +1826,11 @@ static void usage(const char *argv0)
 	printf("-h, --help			Show this help screen\n");
 	printf("    --hflip			Flip the image horizontally\n");
 	printf("-H, --histogram file		Compute histogram on the output image and store it to file\n");
-	printf("    --histogram-type type	Set the histogram type. Valid values are hgo.\n");
+	printf("    --histogram-areas areas	Configure the HGT histogram hue areas.\n");
+	printf("				Must be specified for HGT histograms.\n");
+	printf("				Areas are expressed as a comma-separated list of\n");
+	printf("				lower and upper boundaries for areas 0 to 5 ([0-255])\n");
+	printf("    --histogram-type type	Set the histogram type. Valid values are hgo and hgt.\n");
 	printf("				Defaults to hgo if not specified\n");
 	printf("-i, --in-format format		Set the input image format\n");
 	printf("				Defaults to RGB24 if not specified\n");
@@ -1694,6 +1858,7 @@ static void list_formats(void)
 #define OPT_VFLIP		257
 #define OPT_CROP		258
 #define OPT_HISTOGRAM_TYPE	259
+#define OPT_HISTOGRAM_AREAS	260
 
 static struct option opts[] = {
 	{"alpha", 1, 0, 'a'},
@@ -1705,6 +1870,7 @@ static struct option opts[] = {
 	{"help", 0, 0, 'h'},
 	{"hflip", 0, 0, OPT_HFLIP},
 	{"histogram", 1, 0, 'H'},
+	{"histogram-areas", 1, 0, OPT_HISTOGRAM_AREAS},
 	{"histogram-type", 1, 0, OPT_HISTOGRAM_TYPE},
 	{"in-format", 1, 0, 'i'},
 	{"lut", 1, 0, 'l'},
@@ -2000,11 +2166,30 @@ static int parse_args(struct options *options, int argc, char *argv[])
 		case OPT_HISTOGRAM_TYPE:
 			if (!strcmp(optarg, "hgo")) {
 				options->histo_type = HISTOGRAM_HGO;
+			} else if (!strcmp(optarg, "hgt")) {
+				options->histo_type = HISTOGRAM_HGT;
 			} else {
 				printf("Invalid histogram type '%s'\n", optarg);
 				return 1;
 			}
 			break;
+
+		case OPT_HISTOGRAM_AREAS: {
+			int matched;
+
+			matched = sscanf(optarg, "%hhu,%hhu,%hhu,%hhu,%hhu,%hhu,%hhu,%hhu,%hhu,%hhu,%hhu,%hhu",
+					 &options->histo_areas[0], &options->histo_areas[1],
+					 &options->histo_areas[2], &options->histo_areas[3],
+					 &options->histo_areas[4], &options->histo_areas[5],
+					 &options->histo_areas[6], &options->histo_areas[7],
+					 &options->histo_areas[8], &options->histo_areas[9],
+					 &options->histo_areas[10], &options->histo_areas[11]);
+			if (matched != 12) {
+				printf("Invalid hgt hue areas '%s'\n", optarg);
+				return 1;
+			}
+			break;
+		}
 
 		default:
 			printf("Invalid option -%c\n", c);
