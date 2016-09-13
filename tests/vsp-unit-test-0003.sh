@@ -30,6 +30,7 @@ test_scale() {
 
 test_main() {
 	for format in $formats ; do
+		test_scale $format 640x640 640x480
 		test_scale $format 1024x768 640x480
 		test_scale $format 640x480 1024x768
 	done
