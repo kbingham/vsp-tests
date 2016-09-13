@@ -146,7 +146,10 @@ reference_frame() {
 			options="$options --lut $value"
 			;;
 		rotate)
-			[ x$value = x90 ] && options="$options --rotate"
+			[ x$value = x90 ] && {
+				options="$options --rotate" ;
+				__vsp_pixel_perfect=false ;
+			}
 			;;
 		vflip)
 			[ x$value = x1 ] && options="$options --vflip"
@@ -241,7 +244,7 @@ compare_frames() {
 	local size=$(vsp1_entity_get_size wpf.$wpf 1)
 	local method=exact
 
-	if [ x$__vsp_uds_scale = xtrue ] ; then
+	if [ $__vsp_pixel_perfect != xtrue ] ; then
 		method=fuzzy
 	fi
 
@@ -420,9 +423,9 @@ pipe_reset() {
 
 	__vsp_bru_inputs=
 	__vsp_rpf_format=
-	__vsp_uds_scale=
 	__vsp_wpf_index=
 	__vsp_wpf_format=
+	__vsp_pixel_perfect=true
 }
 
 pipe_configure() {
@@ -512,7 +515,7 @@ format_rpf_bru_uds() {
 	$mediactl -d $mdev -V "'$dev wpf.0':0 [fmt:$infmt/$outsize]"
 	$mediactl -d $mdev -V "'$dev wpf.0':1 [fmt:$outfmt/$outsize]"
 
-	[ $insize != $outsize ] && __vsp_uds_scale=true
+	[ $insize != $outsize ] && __vsp_pixel_perfect=false
 	__vsp_rpf_format=$1
 	__vsp_wpf_format=$3
 }
@@ -572,7 +575,7 @@ format_rpf_uds() {
 	$mediactl -d $mdev -V "'$dev wpf.0':0 [fmt:$infmt/$outsize]"
 	$mediactl -d $mdev -V "'$dev wpf.0':1 [fmt:$outfmt/$outsize]"
 
-	[ $insize != $outsize ] && __vsp_uds_scale=true
+	[ $insize != $outsize ] && __vsp_pixel_perfect=false
 	__vsp_rpf_format=$1
 	__vsp_wpf_format=$3
 }
@@ -593,7 +596,7 @@ format_rpf_uds_bru() {
 	$mediactl -d $mdev -V "'$dev wpf.0':0 [fmt:$infmt/$outsize]"
 	$mediactl -d $mdev -V "'$dev wpf.0':1 [fmt:$outfmt/$outsize]"
 
-	[ $insize != $outsize ] && __vsp_uds_scale=true
+	[ $insize != $outsize ] && __vsp_pixel_perfect=false
 	__vsp_rpf_format=$1
 	__vsp_wpf_format=$3
 }
@@ -610,7 +613,7 @@ format_rpf_sru() {
 	$mediactl -d $mdev -V "'$dev wpf.0':0 [fmt:$infmt/$outsize]"
 	$mediactl -d $mdev -V "'$dev wpf.0':1 [fmt:$outfmt/$outsize]"
 
-	[ $insize != $outsize ] && __vsp_uds_scale=true
+	__vsp_pixel_perfect=false
 	__vsp_rpf_format=$1
 	__vsp_wpf_format=$3
 }
