@@ -242,19 +242,19 @@ compare_frames() {
 	local in_fmt=$(echo $in_format | tr '[:upper:]' '[:lower:]')
 	local out_fmt=$(echo $out_format | tr '[:upper:]' '[:lower:]')
 	local size=$(vsp1_entity_get_size wpf.$wpf 1)
-	local method=exact
-
-	if [ $__vsp_pixel_perfect != xtrue ] ; then
-		method=fuzzy
-	fi
 
 	reference_frame ${frames_dir}ref-frame.bin $in_format $out_format $size $args
 
+	local method=exact
 	local result="pass"
 	local params=${args// /-}
 	params=${params:+-$params}
 	params=${params//\//_}
 	params=$in_fmt-$out_fmt-$size$params
+
+	if [ x$__vsp_pixel_perfect != xtrue ] ; then
+		method=fuzzy
+	fi
 
 	for frame in ${frames_dir}frame-*.bin ; do
 		local match="true"
