@@ -863,7 +863,8 @@ test_init() {
 	done
 
 	if [ -z $best_mdev ] ; then
-		echo "No device found with feature set $features" | ./logger.sh config >> $logfile
+		echo "No device found with feature set \`$features'" | ./logger.sh config >> $logfile
+		echo "Test requires unavailable feature set \`$features': skipped" >&2
 		exit 1
 	fi
 
