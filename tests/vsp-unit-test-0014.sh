@@ -14,6 +14,11 @@ formats="NV12M NV16M NV21M NV61M UYVY VYUY YUV420M YUV422M YUV444M YUYV YVYU"
 test_rpf_unpacking() {
 	test_start "RPF unpacking in $format"
 
+	if [ $format = VYUY -a $(vsp1_generation) != VSP1 ] ; then
+		test_complete skip
+		return
+	fi
+
 	pipe_configure rpf-wpf 0 0
 	format_configure rpf-wpf 0 0 $format 1024x768 YUV444M
 

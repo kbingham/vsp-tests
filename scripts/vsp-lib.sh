@@ -13,6 +13,14 @@ vsp1_device() {
 	$mediactl -d $mdev -p | grep 'bus info' | sed 's/.*platform://'
 }
 
+vsp1_model() {
+	$mediactl -d $mdev -p | grep 'model' | sed 's/.* //'
+}
+
+vsp1_generation() {
+	echo $(vsp1_model) | sed 's/-.*//'
+}
+
 vsp1_has_feature() {
 	local feature=$1
 	local entity_name=$(echo $feature | sed 's/\[.*//')
