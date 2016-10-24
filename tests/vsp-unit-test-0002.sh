@@ -9,7 +9,7 @@
 source vsp-lib.sh
 
 features="rpf.0 wpf.0"
-formats="NV12M NV16M NV21M NV61M UYVY VYUY YUV420M YUV422M YUV444M YUYV YVYU"
+formats="NV12M NV16M NV21M NV61M UYVY VYUY YUV420M YUV422M YUV444M YVU420M YVU422M YVU444M YUYV YVYU"
 
 test_wpf_packing() {
 	test_start "WPF packing in $format"
