@@ -1,4 +1,4 @@
-SCRIPTS=logger.sh vsp-lib.sh
+SCRIPTS=$(wildcard *.sh)
 
 all:
 
