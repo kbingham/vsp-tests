@@ -6,6 +6,17 @@ now() {
 
 label=${1:+ [$1]}
 
+TRACE_MARKER=/sys/kernel/debug/tracing/trace_marker
+if [ -e $TRACE_MARKER ]; then
+	extra_log_files=$TRACE_MARKER
+fi
+
 while read line ; do
-	echo "$(now)$label $line"
+	newline="$(now)$label $line"
+
+	echo "$newline"
+
+	for f in $extra_log_files; do
+		echo "$newline" >> $f;
+	done;
 done
