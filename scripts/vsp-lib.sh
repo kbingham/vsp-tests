@@ -898,6 +898,7 @@ vsp_runner() {
 	local count=10
 	local pause=
 	local skip=7
+	local queue_late=
 
 	for option in $* ; do
 		case $option in
@@ -916,7 +917,9 @@ vsp_runner() {
 		--skip=*)
 			skip=${option/--skip=/}
 			;;
-
+		--queue-late)
+			queue_late=queue-late
+			;;
 		*)
 			return 1
 			;;
@@ -959,6 +962,7 @@ vsp_runner() {
 
 	$yavta -c$count -n $buffers ${format:+-f $format} ${size:+-s $size} \
 		${skip:+--skip $skip} ${file:+--file=$file} ${pause:+-p$pause} \
+		${queue_late:+--$queue_late} \
 		$videodev | ./logger.sh $entity >> $logfile
 }
 
