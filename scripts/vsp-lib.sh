@@ -273,12 +273,12 @@ compare_frames() {
 		}
 
 		if [ $match = "false" -o x$VSP_KEEP_FRAMES = x1 ] ; then
-			mv $frame ${0/.sh/}-$(basename ${frame/.bin/-$params.bin})
+			mv $frame ${0/.sh/}-$params-$(basename ${frame})
 		fi
 	done
 
 	if [ x$VSP_KEEP_FRAMES = x1 -o $result = "fail" ] ; then
-		mv ${frames_dir}ref-frame.bin ${0/.sh/}-ref-frame-$params.bin
+		mv ${frames_dir}ref-frame.bin ${0/.sh/}-$params-ref-frame.bin
 	else
 		rm -f ${frames_dir}ref-frame.bin
 		rm -f ${frames_dir}frame-*.bin
