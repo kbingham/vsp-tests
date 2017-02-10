@@ -95,6 +95,13 @@ struct format_info {
 	struct format_yuv_info yuv;
 };
 
+struct image_rect {
+	int left;
+	int top;
+	unsigned int width;
+	unsigned int height;
+};
+
 struct image {
 	const struct format_info *format;
 	unsigned int width;
@@ -127,6 +134,8 @@ struct options {
 	bool rotate;
 	unsigned int compose;
 	struct params params;
+	bool crop;
+	struct image_rect inputcrop;
 };
 
 /* -----------------------------------------------------------------------------
@@ -1076,6 +1085,25 @@ static void image_flip(const struct image *input, struct image *output,
 }
 
 /* -----------------------------------------------------------------------------
+ * Image Cropping
+ */
+
+static void image_crop(const struct image *input, const struct image *output,
+		       const struct image_rect *crop)
+{
+	unsigned int offset = (crop->top * input->width + crop->left) * 3;
+	const uint8_t *idata = input->data + offset;
+	uint8_t *odata = output->data;
+	unsigned int y;
+
+	for (y = 0; y < output->height; ++y) {
+		memcpy(odata, idata, output->width * 3);
+		odata += output->width * 3;
+		idata += input->width * 3;
+	}
+}
+
+/* -----------------------------------------------------------------------------
  * Look Up Table
  */
 
@@ -1363,6 +1391,22 @@ static int process(const struct options *options)
 		input = rgb;
 	}
 
+	/* Crop */
+	if (options->crop) {
+		struct image *cropped;
+
+		cropped = image_new(input->format, options->inputcrop.width,
+				options->inputcrop.height);
+		if (!cropped) {
+			ret = -ENOMEM;
+			goto done;
+		}
+
+		image_crop(input, cropped, &options->inputcrop);
+		image_delete(input);
+		input = cropped;
+	}
+
 	/* Scale */
 	if (options->output_width && options->output_height) {
 		output_width = options->output_width;
@@ -1596,6 +1640,7 @@ static void usage(const char *argv0)
 	printf("			or percentages ([0%% - 100%%]). Defaults to 1.0\n");
 	printf("-c, --compose n		Compose n copies of the image offset by (50,50) over a black background\n");
 	printf("-C, --no-chroma-average	Disable chroma averaging for odd pixels on output\n");
+	printf("    --crop (X,Y)/WxH	Crop the input image\n");
 	printf("-e, --encoding enc	Set the YCbCr encoding method. Valid values are\n");
 	printf("			BT.601, REC.709, BT.2020 and SMPTE240M\n");
 	printf("-f, --format format	Set the output image format\n");
@@ -1628,11 +1673,13 @@ static void list_formats(void)
 
 #define OPT_HFLIP	256
 #define OPT_VFLIP	257
+#define OPT_CROP	258
 
 static struct option opts[] = {
 	{"alpha", 1, 0, 'a'},
 	{"clu", 1, 0, 'L'},
 	{"compose", 1, 0, 'c'},
+	{"crop", 1, 0, OPT_CROP},
 	{"encoding", 1, 0, 'e'},
 	{"format", 1, 0, 'f'},
 	{"help", 0, 0, 'h'},
@@ -1648,6 +1695,113 @@ static struct option opts[] = {
 	{"vflip", 0, 0, OPT_VFLIP},
 	{0, 0, 0, 0}
 };
+
+static void parser_print_error(const char *p, const char *end)
+{
+	int pos;
+
+	pos = end - p + 1;
+
+	if (pos < 0)
+		pos = 0;
+	if (pos > (int) strlen(p) + 1)
+		pos = strlen(p) + 1;
+
+	printf("\n");
+	printf(" %s\n", p);
+	printf(" %*s\n", pos, "^");
+}
+
+static int parse_crop(struct image_rect *crop, const char *string)
+{
+	/* (X,Y)/WxH */
+	const char *p = string;
+	char *endptr;
+	int value;
+
+	if (*p != '(') {
+		printf("Invalid crop format, expected '('\n");
+		goto error;
+	}
+
+	p++;
+	crop->left = strtol(p, &endptr, 10);
+	if (p == endptr) {
+		printf("Invalid crop format, expected x coordinate\n");
+		goto error;
+	}
+
+	p = endptr;
+	if (*p != ',') {
+		printf("Invalid crop format, expected ','\n");
+		goto error;
+	}
+
+	p++;
+	crop->top = strtol(p, &endptr, 10);
+	if (p == endptr) {
+		printf("Invalid crop format, expected y coordinate\n");
+		goto error;
+	}
+
+	p = endptr;
+	if (*p != ')') {
+		printf("Invalid crop format, expected ')'\n");
+		goto error;
+	}
+
+	p++;
+	if (*p != '/') {
+		printf("Invalid crop format, expected '/'\n");
+		goto error;
+	}
+
+	p++;
+	value = strtol(p, &endptr, 10);
+	if (p == endptr) {
+		printf("Invalid crop format, expected width\n");
+		goto error;
+	}
+
+	if (value < 0) {
+		printf("width must be positive\n");
+		goto error;
+	}
+
+	crop->width = value;
+
+	p = endptr;
+	if (*p != 'x') {
+		printf("Invalid crop format, expected 'x'\n");
+		goto error;
+	}
+
+	p++;
+	value = strtol(p, &endptr, 10);
+	if (p == endptr) {
+		printf("Invalid crop format, expected height\n");
+		goto error;
+	}
+
+	if (value < 0) {
+		printf("height must be positive\n");
+		goto error;
+	}
+
+	crop->height = value;
+
+	p = endptr;
+	if (*p != 0) {
+		printf("Invalid crop format, garbage at end of input\n");
+		goto error;
+	}
+
+	return 0;
+
+error:
+	parser_print_error(string, p);
+	return 1;
+}
 
 static int parse_args(struct options *options, int argc, char *argv[])
 {
@@ -1807,6 +1961,19 @@ static int parse_args(struct options *options, int argc, char *argv[])
 
 		case OPT_VFLIP:
 			options->vflip = true;
+			break;
+
+		case OPT_CROP:
+			if (parse_crop(&options->inputcrop, optarg))
+				return 1;
+
+			if (options->inputcrop.left < 0 || options->inputcrop.top < 0) {
+				printf("Invalid crop rectangle '%s': coordinates must be positive\n",
+				       optarg);
+				return 1;
+			}
+
+			options->crop = true;
 			break;
 
 		default:
