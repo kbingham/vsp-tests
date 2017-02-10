@@ -258,6 +258,9 @@ compare_frames() {
 	local params=${args// /-}
 	params=${params:+-$params}
 	params=${params//\//_}
+	params=${params//=/_}
+	params=${params//(/_}
+	params=${params//)/_}
 	params=$in_fmt-$out_fmt-$size$params
 
 	if [ x$__vsp_pixel_perfect != xtrue ] ; then
