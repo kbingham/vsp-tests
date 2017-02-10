@@ -147,6 +147,9 @@ reference_frame() {
 		clu)
 			options="$options --clu $value"
 			;;
+		crop)
+			options="$options --crop $value"
+			;;
 		hflip)
 			[ x$value = x1 ] && options="$options --hflip"
 			;;
@@ -662,22 +665,51 @@ format_rpf_wpf() {
 	local infmt=$(format_v4l2_to_mbus $3)
 	local size=$4
 	local outfmt=$(format_v4l2_to_mbus $5)
-	local crop=$6
+	local rpfcrop=
+	local wpfcrop=
+	local rpfoutsize=
 	local outsize=
-
-	if [ x$crop != 'x' ] ; then
-		crop="crop:$crop"
-		outsize=$(echo $crop | sed 's/.*\///')
-	else
-		outsize=$size
-	fi
-
-	$mediactl -d $mdev -V "'$dev rpf.$rpf':0 [fmt:$infmt/$size]"
-	$mediactl -d $mdev -V "'$dev wpf.$wpf':0 [fmt:$infmt/$size $crop]"
-	$mediactl -d $mdev -V "'$dev wpf.$wpf':1 [fmt:$outfmt/$outsize]"
+	local option=
 
 	__vsp_rpf_format=$3
 	__vsp_wpf_format=$5
+
+	shift 5
+
+	for option in $* ; do
+		case $option in
+		--rpfcrop=*)
+			rpfcrop=${option/--rpfcrop=/}
+			;;
+
+		--wpfcrop=*)
+			wpfcrop=${option/--wpfcrop=/}
+			;;
+		*)
+			echo "format_rpf_wpf: Unrecognised argument $option"
+			return 1
+			;;
+		esac
+	done
+
+	if [ x$rpfcrop != 'x' ] ; then
+		rpfcrop="crop:$rpfcrop"
+		rpfoutsize=$(echo $rpfcrop | sed 's/.*\///')
+	else
+		rpfoutsize=$size
+	fi
+
+	if [ x$wpfcrop != 'x' ] ; then
+		wpfcrop="crop:$wpfcrop"
+		outsize=$(echo $wpfcrop | sed 's/.*\///')
+	else
+		outsize=$rpfoutsize
+	fi
+
+	$mediactl -d $mdev -V "'$dev rpf.$rpf':0 [fmt:$infmt/$size $rpfcrop]"
+	$mediactl -d $mdev -V "'$dev rpf.$rpf':1 [fmt:$infmt/$rpfoutsize]"
+	$mediactl -d $mdev -V "'$dev wpf.$wpf':0 [fmt:$infmt/$rpfoutsize $wpfcrop]"
+	$mediactl -d $mdev -V "'$dev wpf.$wpf':1 [fmt:$outfmt/$outsize]"
 }
 
 format_wpf() {
