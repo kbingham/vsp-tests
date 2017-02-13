@@ -367,7 +367,6 @@ pipe_rpf_bru() {
 	$mediactl -d $mdev -l "'$dev wpf.0':1 -> '$dev wpf.0 output':0 [1]"
 
 	__vsp_bru_inputs=$ninputs
-	__vsp_wpf_index=0
 }
 
 pipe_rpf_bru_uds() {
@@ -377,48 +376,36 @@ pipe_rpf_bru_uds() {
 	$mediactl -d $mdev -l "'$dev bru':$bru_output -> '$dev uds.0':0 [1]"
 	$mediactl -d $mdev -l "'$dev uds.0':1 -> '$dev wpf.0':0 [1]"
 	$mediactl -d $mdev -l "'$dev wpf.0':1 -> '$dev wpf.0 output':0 [1]"
-
-	__vsp_wpf_index=0
 }
 
 pipe_rpf_clu() {
 	$mediactl -d $mdev -l "'$dev rpf.0':1 -> '$dev clu':0 [1]"
 	$mediactl -d $mdev -l "'$dev clu':1 -> '$dev wpf.0':0 [1]"
 	$mediactl -d $mdev -l "'$dev wpf.0':1 -> '$dev wpf.0 output':0 [1]"
-
-	__vsp_wpf_index=0
 }
 
 pipe_rpf_hgo() {
 	$mediactl -d $mdev -l "'$dev rpf.0':1 -> '$dev wpf.0':0 [1]"
 	$mediactl -d $mdev -l "'$dev rpf.0':1 -> '$dev hgo':0 [1]"
 	$mediactl -d $mdev -l "'$dev wpf.0':1 -> '$dev wpf.0 output':0 [1]"
-
-	__vsp_wpf_index=0
 }
 
 pipe_rpf_hst() {
 	$mediactl -d $mdev -l "'$dev rpf.0':1 -> '$dev hst':0 [1]"
 	$mediactl -d $mdev -l "'$dev hst':1 -> '$dev wpf.0':0 [1]"
 	$mediactl -d $mdev -l "'$dev wpf.0':1 -> '$dev wpf.0 output':0 [1]"
-
-	__vsp_wpf_index=0
 }
 
 pipe_rpf_lut() {
 	$mediactl -d $mdev -l "'$dev rpf.0':1 -> '$dev lut':0 [1]"
 	$mediactl -d $mdev -l "'$dev lut':1 -> '$dev wpf.0':0 [1]"
 	$mediactl -d $mdev -l "'$dev wpf.0':1 -> '$dev wpf.0 output':0 [1]"
-
-	__vsp_wpf_index=0
 }
 
 pipe_rpf_uds() {
 	$mediactl -d $mdev -l "'$dev rpf.0':1 -> '$dev uds.0':0 [1]"
 	$mediactl -d $mdev -l "'$dev uds.0':1 -> '$dev wpf.0':0 [1]"
 	$mediactl -d $mdev -l "'$dev wpf.0':1 -> '$dev wpf.0 output':0 [1]"
-
-	__vsp_wpf_index=0
 }
 
 pipe_rpf_uds_bru() {
@@ -428,16 +415,12 @@ pipe_rpf_uds_bru() {
 	$mediactl -d $mdev -l "'$dev uds.0':1 -> '$dev bru':0 [1]"
 	$mediactl -d $mdev -l "'$dev bru':$bru_output -> '$dev wpf.0':0 [1]"
 	$mediactl -d $mdev -l "'$dev wpf.0':1 -> '$dev wpf.0 output':0 [1]"
-
-	__vsp_wpf_index=0
 }
 
 pipe_rpf_sru() {
 	$mediactl -d $mdev -l "'$dev rpf.0':1 -> '$dev sru':0 [1]"
 	$mediactl -d $mdev -l "'$dev sru':1 -> '$dev wpf.0':0 [1]"
 	$mediactl -d $mdev -l "'$dev wpf.0':1 -> '$dev wpf.0 output':0 [1]"
-
-	__vsp_wpf_index=0
 }
 
 pipe_rpf_wpf() {
@@ -455,7 +438,7 @@ pipe_reset() {
 
 	__vsp_bru_inputs=
 	__vsp_rpf_format=
-	__vsp_wpf_index=
+	__vsp_wpf_index=0
 	__vsp_wpf_format=
 	__vsp_pixel_perfect=true
 }
