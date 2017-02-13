@@ -256,6 +256,7 @@ compare_frame_fuzzy() {
 
 compare_frames() {
 	local args=$*
+	local pipe=$__vsp_pipe
 	local in_format=$__vsp_rpf_format
 	local out_format=$__vsp_wpf_format
 	local wpf=$__vsp_wpf_index
@@ -274,7 +275,7 @@ compare_frames() {
 	params=${params//=/_}
 	params=${params//(/_}
 	params=${params//)/_}
-	params=$in_fmt-$out_fmt-$size$params
+	params=$pipe-$in_fmt-$out_fmt-$size$params
 
 	if [ x$__vsp_pixel_perfect != xtrue ] ; then
 		method=fuzzy
@@ -449,6 +450,8 @@ pipe_configure() {
 
 	pipe_reset
 	pipe_$pipe $*
+
+	__vsp_pipe=$pipe
 }
 
 # ------------------------------------------------------------------------------
