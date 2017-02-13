@@ -103,6 +103,16 @@ reference_frame() {
 	local alpha=
 	local options=
 
+	# gen-image doesn't support processing HSV input images. The good news
+	# is that the HSV tests that take HSV images as inputs don't need to
+	# perform any processing. We can set the input format to RGB for HSB
+	# reference frame generation.
+	case $in_format in
+	HSV24 | HSV32)
+		in_format=ARGB32
+		;;
+	esac
+
 	# Start with the input format to compute the alpha value being used by
 	# the RPF after unpacking. Keep in sync with generate_input_frame.
 	case $in_format in
