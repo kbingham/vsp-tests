@@ -48,6 +48,11 @@ All but the HGO and CLU/LUT tests can be run with the latest version of these
 tools. To test the HGO and CLU/LUT, the 'vsp' branch of 'yavta' is currently
 needed.
 
+The following tool is additionally required to run some of the tests. If the
+tool is not available the corresponding tests will be skipped.
+
+* stress (available at http://people.seas.harvard.edu/~apw/stress/)
+
 
 -----------------
 Running the Tests
