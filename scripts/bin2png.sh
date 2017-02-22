@@ -4,8 +4,8 @@ FILE=${1:-.}
 
 convert_image() {
 	local file=$1
-	local pnm=${file/%bin/pnm}
-	local png=${file/%bin/png}
+	local pnm=${file%bin}pnm
+	local png=${file%bin}png
 
 	local format=$(echo $file | sed -e 's|.*-\([[:alnum:]]*\)-\([0-9]*x[0-9]*\).*.bin|\1|' | tr '[:lower:]' '[:upper:]')
 	local size=$(echo $file   | sed -e 's|.*-\([[:alnum:]]*\)-\([0-9]*x[0-9]*\).*.bin|\2|')
