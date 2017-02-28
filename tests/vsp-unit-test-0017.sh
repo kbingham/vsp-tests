@@ -47,6 +47,10 @@ test_hsv_to_hsv() {
 }
 
 test_main() {
+	if [ $(vsp1_generation) != VSP1 ] ; then
+		exit 1
+	fi
+
 	for format in $formats ; do
 		test_rgb_to_hsv $format
 		test_hsv_to_hsv $format
