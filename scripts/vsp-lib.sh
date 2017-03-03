@@ -105,7 +105,7 @@ reference_frame() {
 
 	# gen-image doesn't support processing HSV input images. The good news
 	# is that the HSV tests that take HSV images as inputs don't need to
-	# perform any processing. We can set the input format to RGB for HSB
+	# perform any processing. We can set the input format to RGB for HSV
 	# reference frame generation.
 	case $in_format in
 	HSV24 | HSV32)
