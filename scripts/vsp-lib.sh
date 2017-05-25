@@ -53,9 +53,14 @@ vsp1_count_wpfs() {
 	$mediactl -d $mdev -p | grep -- '- entity.*wpf.[0-9] [^o]' | wc -l
 }
 
-vsp1_count_bru_inputs() {
-	local num_pads=`$mediactl -d $mdev -p | grep 'entity.*bru' | sed 's/.*(\([0-9]\) pads.*/\1/'`
+__vsp1_count_brx_inputs() {
+	local name=$1
+	local num_pads=`$mediactl -d $mdev -p | grep "entity.*$name" | sed 's/.*(\([0-9]\) pads.*/\1/'`
 	echo $((num_pads-1))
+}
+
+vsp1_count_bru_inputs() {
+	__vsp1_count_brx_inputs "bru"
 }
 
 vsp1_entity_subdev() {
@@ -105,7 +110,7 @@ reference_frame() {
 
 	# gen-image doesn't support processing HSV input images. The good news
 	# is that the HSV tests that take HSV images as inputs don't need to
-	# perform any processing. We can set the input format to RGB for HSV
+	# perform any processing. We can set the input format to RGB for HSB
 	# reference frame generation.
 	case $in_format in
 	HSV24 | HSV32)
@@ -178,7 +183,7 @@ reference_frame() {
 		esac
 	done
 
-	[ x$__vsp_bru_inputs != x ] && options="$options -c $__vsp_bru_inputs"
+	[ x$__vsp_brx_inputs != x ] && options="$options -c $__vsp_brx_inputs"
 
 	$genimage -i $in_format -f $out_format -s $size -a $alpha $options -o $file \
 		frames/frame-reference-1024x768.pnm
@@ -363,18 +368,27 @@ pipe_none() {
 	return
 }
 
-pipe_rpf_bru() {
-	local ninputs=$1
+__pipe_rpf_brx() {
+	local name=$1
+	local ninputs=$2
 
-	local bru_output=$(vsp1_count_bru_inputs)
+	local output=$(__vsp1_count_brx_inputs $name)
 
 	for input in `seq 0 1 $((ninputs-1))` ; do
-		$mediactl -d $mdev -l "'$dev rpf.$input':1 -> '$dev bru':$input [1]"
+		$mediactl -d $mdev -l "'$dev rpf.$input':1 -> '$dev $name':$input [1]"
 	done
-	$mediactl -d $mdev -l "'$dev bru':$bru_output -> '$dev wpf.0':0 [1]"
+	$mediactl -d $mdev -l "'$dev $name':$output -> '$dev wpf.0':0 [1]"
 	$mediactl -d $mdev -l "'$dev wpf.0':1 -> '$dev wpf.0 output':0 [1]"
 
-	__vsp_bru_inputs=$ninputs
+	__vsp_brx_inputs=$ninputs
+}
+
+pipe_rpf_brs() {
+	__pipe_rpf_brx "brs" $*
+}
+
+pipe_rpf_bru() {
+	__pipe_rpf_brx "bru" $*
 }
 
 pipe_rpf_bru_uds() {
@@ -468,7 +482,7 @@ pipe_rpf_wpf() {
 pipe_reset() {
 	$mediactl -d $mdev -r
 
-	__vsp_bru_inputs=
+	__vsp_brx_inputs=
 	__vsp_histo_type=
 	__vsp_rpf_format=
 	__vsp_wpf_index=0
@@ -532,26 +546,35 @@ format_rpf() {
 	__vsp_rpf_format=$1
 }
 
-format_rpf_bru() {
-	local format=$(format_v4l2_to_mbus $1)
-	local size=$2
-	local ninputs=$3
+__format_rpf_brx() {
+	local name=$1
+	local format=$(format_v4l2_to_mbus $2)
+	local size=$3
+	local ninputs=$4
 	local offset=0
 
-	local bru_output=$(vsp1_count_bru_inputs)
+	local output=$(__vsp1_count_brx_inputs $name)
 
 	for input in `seq 0 1 $((ninputs-1))` ; do
 		offset=$((offset+50))
 		$mediactl -d $mdev -V "'$dev rpf.$input':0 [fmt:$format/$size]"
-		$mediactl -d $mdev -V "'$dev bru':$input   [fmt:$format/$size compose:($offset,$offset)/$size]"
+		$mediactl -d $mdev -V "'$dev $name':$input [fmt:$format/$size compose:($offset,$offset)/$size]"
 	done
 
-	$mediactl -d $mdev -V "'$dev bru':$bru_output [fmt:$format/$size]"
+	$mediactl -d $mdev -V "'$dev $name':$output [fmt:$format/$size]"
 	$mediactl -d $mdev -V "'$dev wpf.0':0 [fmt:$format/$size]"
 	$mediactl -d $mdev -V "'$dev wpf.0':1 [fmt:$format/$size]"
 
-	__vsp_rpf_format=$1
-	__vsp_wpf_format=$1
+	__vsp_rpf_format=$2
+	__vsp_wpf_format=$2
+}
+
+format_rpf_brs() {
+	__format_rpf_brx "brs" $*
+}
+
+format_rpf_bru() {
+	__format_rpf_brx "bru" $*
 }
 
 format_rpf_bru_uds() {
