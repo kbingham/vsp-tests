@@ -54,7 +54,7 @@ vsp1_count_wpfs() {
 }
 
 vsp1_count_bru_inputs() {
-	local num_pads=`media-ctl -p | grep 'entity.*bru' | sed 's/.*(\([0-9]\) pads.*/\1/'`
+	local num_pads=`$mediactl -d $mdev -p | grep 'entity.*bru' | sed 's/.*(\([0-9]\) pads.*/\1/'`
 	echo $((num_pads-1))
 }
 
