@@ -6,7 +6,7 @@
 # by the RPF.
 #
 
-source vsp-lib.sh
+. ./vsp-lib.sh
 
 features="rpf.0 wpf.0"
 formats="RGB332 ARGB555 XRGB555 RGB565 BGR24 RGB24 ABGR32 ARGB32 XBGR32 XRGB32"

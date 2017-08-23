@@ -4,7 +4,7 @@
 # Test composition through the BRU in RGB and YUV formats.
 #
 
-source vsp-lib.sh
+. ./vsp-lib.sh
 
 features="rpf.0 rpf.1 bru wpf.0"
 formats="RGB24 YUV444M"

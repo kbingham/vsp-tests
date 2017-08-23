@@ -5,7 +5,7 @@
 # pipeline with identical input and output formats.
 #
 
-source vsp-lib.sh
+. ./vsp-lib.sh
 
 features="rpf.0 uds wpf.0"
 formats="RGB24 YUV444M"

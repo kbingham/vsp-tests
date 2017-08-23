@@ -7,7 +7,7 @@
 # duration pipeline lifetime while we stress the system.
 #
 
-source vsp-lib.sh
+. ./vsp-lib.sh
 
 features="rpf.0 wpf.0"
 

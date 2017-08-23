@@ -8,7 +8,7 @@
 # still successful even with a suspend resume cycle in the middle of the test.
 #
 
-source vsp-lib.sh
+. ./vsp-lib.sh
 
 features="rpf.0 wpf.0"
 

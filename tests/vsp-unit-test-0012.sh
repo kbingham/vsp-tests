@@ -4,7 +4,7 @@
 # Test runtime modification of horizontal and vertical flipping on WPF.0.
 #
 
-source vsp-lib.sh
+. ./vsp-lib.sh
 
 features="rpf.0 wpf.0 wpf.0[control:'Vertical+Flip']"
 optional_features="wpf.0[control:'Horizontal+Flip']"

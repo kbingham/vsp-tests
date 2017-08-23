@@ -5,7 +5,7 @@
 # cropping windows.
 #
 
-source vsp-lib.sh
+. ./vsp-lib.sh
 
 features="rpf.0 wpf.0"
 crops="(0,0)/512x384 (32,32)/512x384 (32,64)/512x384 (64,32)/512x384"

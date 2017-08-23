@@ -9,7 +9,7 @@
 # formats on the input and output.
 #
 
-source vsp-lib.sh
+. ./vsp-lib.sh
 
 features="rpf.0 hst wpf.0"
 formats="HSV24 HSV32"

@@ -5,7 +5,7 @@
 # much, use RGB24 to simplify frame comparison.
 #
 
-source vsp-lib.sh
+. ./vsp-lib.sh
 
 features="rpf.0 wpf.0 wpf.1"
 optional_features="wpf.1 wpf.2 wpf.3"

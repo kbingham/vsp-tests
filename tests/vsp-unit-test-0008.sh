@@ -5,7 +5,7 @@
 # the pipeline, both before and after the scaler.
 #
 
-source vsp-lib.sh
+. ./vsp-lib.sh
 
 features="bru rpf.0 uds wpf.0"
 formats="RGB24 YUV444M"

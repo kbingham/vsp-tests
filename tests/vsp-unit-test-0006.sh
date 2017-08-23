@@ -4,7 +4,7 @@
 # Test invalid pipelines, without an RPF or without a WPF.
 #
 
-source vsp-lib.sh
+. ./vsp-lib.sh
 
 features="rpf.0 wpf.0"
 format=RGB24

@@ -11,7 +11,7 @@
 # test can be easily extended to try further formats if needed in the future.
 #
 
-source vsp-lib.sh
+. ./vsp-lib.sh
 
 features="rpf.0 wpf.0"
 

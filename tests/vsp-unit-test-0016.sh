@@ -5,7 +5,7 @@
 # with image partitioning by inserting a UDS in the pipeline.
 #
 
-source vsp-lib.sh
+. ./vsp-lib.sh
 
 features="rpf.0 uds wpf.0 wpf.0[control:'Vertical+Flip']"
 optional_features="wpf.0[control:'Horizontal+Flip'] wpf.0[control:'Rotate']"

@@ -5,7 +5,7 @@
 # with the HGT hooked up at the HST output.
 #
 
-source vsp-lib.sh
+. ./vsp-lib.sh
 
 features="hgt hsi hst rpf.0 wpf.0"
 

@@ -6,7 +6,7 @@
 # by the RPF.
 #
 
-source vsp-lib.sh
+. ./vsp-lib.sh
 
 features="rpf.0 wpf.0"
 formats="NV12M NV16M NV21M NV61M UYVY VYUY YUV420M YUV422M YUV444M YVU420M YVU422M YVU444M YUYV YVYU"

@@ -5,7 +5,7 @@
 # up at the RPF output.
 #
 
-source vsp-lib.sh
+. ./vsp-lib.sh
 
 features="hgo rpf.0 wpf.0"
 formats="RGB24 YUV444M"

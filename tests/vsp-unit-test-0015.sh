@@ -8,7 +8,7 @@
 # carefully before putting it into practical use.
 #
 
-source vsp-lib.sh
+. ./vsp-lib.sh
 
 features="rpf.0 sru wpf.0"
 formats="RGB24 YUV444M"
