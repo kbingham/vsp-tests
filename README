@@ -40,6 +40,7 @@ The tests scripts require the following tools to be installed on the target
 system in a directory included in $PATH.
 
 * compare (part of ImageMagick)
+* killall (available from the psmisc package)
 * media-ctl (part of v4l-utils, available at git://linuxtv.org/v4l-utils.git)
 * raw2rgbpnm (available at git://git.retiisi.org.uk/~sailus/raw2rgbpnm.git)
 * yavta (available at git://git.ideasonboard.org/yavta.git)
