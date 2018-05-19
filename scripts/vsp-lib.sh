@@ -1080,11 +1080,17 @@ test_init() {
 test_start() {
 	echo "Testing $1" | ./logger.sh >> $logfile
 	echo -n "Testing $1: " >&2
+
+	# Store the marker for the last line of the kernel log.
+	marker=$(dmesg | tail -n 1 | sed 's/^\[\([^]]*\)\].*/\1/g')
 }
 
 test_complete() {
 	echo "Done: $1" | ./logger.sh >> $logfile
 	echo $1 >&2
+
+	# Capture the part of the kernel log relative to the test.
+	dmesg | sed "1,/$marker/d" | ./logger.sh kernel >> $logfile
 
 	rm -f ${frames_dir}frame-*.bin
 	rm -f ${frames_dir}histo-*.bin
