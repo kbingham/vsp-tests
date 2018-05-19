@@ -15,25 +15,26 @@ features="rpf.0 wpf.0"
 # These can be extracted from /sys/power/pm_test
 suspend_modes="freezer devices platform processors core"
 
-# This extended function performs the same
-# as it's non-extended name-sake - but runs the pipeline
-# for 300 frames. The suspend action occurs between frame #150~#200
-
+# This extended function performs the same as it's non-extended name-sake, but
+# runs the pipeline for a configurable number of frames.
 test_extended_wpf_packing() {
 	local format=$1
+	local num_frames=$2
 
 	pipe_configure rpf-wpf 0 0
 	format_configure rpf-wpf 0 0 ARGB32 1024x768 $format
 
-	vsp_runner rpf.0 --count=300 &
-	vsp_runner wpf.0 --count=300 --skip=297
+	vsp_runner rpf.0 --count=$num_frames &
+	vsp_runner wpf.0 --count=$num_frames --skip=$((num_frames-3))
 
 	local result=$(compare_frames)
 	[ x$result == xpass ] && return 0 || return 1
 }
 
 test_hw_pipe() {
-	test_extended_wpf_packing RGB24
+	# Run the pipeline for 1000 frames. The suspend action should occur in
+	# the middle.
+	test_extended_wpf_packing RGB24 1000
 }
 
 test_suspend_resume() {
