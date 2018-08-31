@@ -1094,3 +1094,37 @@ test_complete() {
 test_run() {
 	test_main | ./logger.sh error >> $logfile
 }
+
+# ------------------------------------------------------------------------------
+# Common argument parsing
+#
+# non-recognised arguments are restored, to allow tests to implement their own
+# parsing if necessary.
+
+POSITIONAL=()
+while [[ $# -gt 0 ]]
+do
+case $1 in
+	-x|--debug)
+		set -x;
+		shift
+		;;
+	-k|--keep-frames)
+		export VSP_KEEP_FRAMES=1
+		shift
+		;;
+	-h|--help)
+		echo "$(basename $0): VSP Test library"
+		echo "  -x|--debug          enable shell debug"
+		echo "  -k|--keep-frames    keep generated and captured frames"
+		echo "  -h|--help           this help"
+		exit
+		shift
+		;;
+	*)    # unknown option
+		POSITIONAL+=("$1") # save it in an array for later
+		shift # past argument
+		;;
+esac
+done
+set -- "${POSITIONAL[@]}" # restore positional parameters
