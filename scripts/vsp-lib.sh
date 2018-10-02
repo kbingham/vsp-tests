@@ -287,7 +287,11 @@ compare_frames() {
 	params=${params//)/_}
 	params=$pipe-$in_fmt-$out_fmt-$size$params
 
-	if [ x$__vsp_pixel_perfect != xtrue ] ; then
+	# The system can hint when pixel-perfection is not supported,
+	# however the user can override to force this requirement with
+	# VSP_PIXEL_PERFECT=1 in the environment or by passing -p, or
+	# --pixel-perfect on the commandline.
+	if [ x$__vsp_pixel_perfect != xtrue -a x$VSP_PIXEL_PERFECT != x1 ] ; then
 		method=fuzzy
 	fi
 
@@ -1113,10 +1117,15 @@ case $1 in
 		export VSP_KEEP_FRAMES=1
 		shift
 		;;
+	-p|--pixel-perfect)
+		export VSP_PIXEL_PERFECT=1
+		shift
+		;;
 	-h|--help)
 		echo "$(basename $0): VSP Test library"
 		echo "  -x|--debug          enable shell debug"
 		echo "  -k|--keep-frames    keep generated and captured frames"
+		echo "  -p|--pixel-perfect  frames must match with pixel perfection"
 		echo "  -h|--help           this help"
 		exit
 		shift
