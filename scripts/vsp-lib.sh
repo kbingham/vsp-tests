@@ -95,7 +95,7 @@ vsp1_set_control() {
 }
 
 # -----------------------------------------------------------------------------
-# Referance frame generation
+# Reference frame generation
 #
 
 reference_frame() {
