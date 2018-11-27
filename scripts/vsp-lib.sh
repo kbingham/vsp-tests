@@ -94,6 +94,14 @@ vsp1_set_control() {
 	$yavta --no-query -w "$control $value" $subdev | ./logger.sh "$entity" >> $logfile
 }
 
+vsp1_reset_controls() {
+	local entity=$1
+	local subdev=$(vsp1_entity_subdev $entity)
+
+	echo "Resetting controls on $subdev" | ./logger.sh "$entity" >> $logfile
+	$yavta --no-query --reset-controls $subdev | ./logger.sh "$entity" >> $logfile
+}
+
 # -----------------------------------------------------------------------------
 # Reference frame generation
 #
@@ -1081,6 +1089,9 @@ test_init() {
 	mdev=$best_mdev
 	dev=$(vsp1_device $mdev)
 	echo "Using device $mdev ($dev)" | ./logger.sh config >> $logfile
+
+	# Reset any rotation or flipping controls
+	vsp1_reset_controls wpf.0
 
 	vsp_runner=./vsp-runner.sh
 }
