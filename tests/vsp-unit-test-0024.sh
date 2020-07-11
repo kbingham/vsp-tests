@@ -1,4 +1,6 @@
 #!/bin/sh
+# SPDX-License-Identifier: GPL-2.0-or-later
+# SPDX-FileCopyrightText: 2017 Renesas Electronics Corporation
 
 #
 # Test composition through the BRS in RGB and YUV formats.

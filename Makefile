@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: CC0-1.0
+
 SUBDIRS=data scripts src tests
 
 recursive=all clean install

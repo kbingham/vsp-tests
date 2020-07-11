@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: CC0-1.0
+
 SUBDIRS=frames
 
 recursive=all clean install

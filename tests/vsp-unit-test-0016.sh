@@ -1,4 +1,6 @@
 #!/bin/sh
+# SPDX-License-Identifier: GPL-2.0-or-later
+# SPDX-FileCopyrightText: 2016-2017 Renesas Electronics Corporation
 
 #
 # Test all combinations of horizontal flip, vertical flip and rotation on WPF.0

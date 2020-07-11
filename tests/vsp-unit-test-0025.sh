@@ -1,4 +1,6 @@
 #!/bin/sh
+# SPDX-License-Identifier: GPL-2.0-or-later
+# SPDX-FileCopyrightText: 2018 Renesas Electronics Corporation
 
 #
 # Test pipelines which have a single pixel dimension. Use a RPF -> WPF

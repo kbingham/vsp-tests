@@ -1,4 +1,6 @@
 #!/usr/bin/python
+# SPDX-License-Identifier: GPL-2.0-or-later
+# SPDX-FileCopyrightText: 2016 Renesas Electronics Corporation
 
 import matplotlib.pyplot as plt
 import struct

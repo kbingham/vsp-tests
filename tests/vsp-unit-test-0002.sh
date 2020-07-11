@@ -1,4 +1,6 @@
 #!/bin/sh
+# SPDX-License-Identifier: GPL-2.0-or-later
+# SPDX-FileCopyrightText: 2016-2017 Renesas Electronics Corporation
 
 #
 # Test WPF packing in YUV mode. Use a RPF -> WPF pipeline with a fixed YUYV
