@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 # SPDX-License-Identifier: GPL-2.0-or-later
 # SPDX-FileCopyrightText: 2016 Renesas Electronics Corporation
 
@@ -49,26 +49,26 @@ def clu_value(x, y, z, scale, a, freq, weights):
 	return (z, y, x, 0)
 
 def generate_clu(config):
-	clu = []
+	clu = bytearray()
 
-	for z in xrange(17):
-		for y in xrange(17):
-			for x in xrange(17):
+	for z in range(17):
+		for y in range(17):
+			for x in range(17):
 				clu.extend(clu_value(x, y, z, **config[1]))
 
-	file('clu-%s.bin' % config[0], 'wb').write(''.join([chr(c) for c in clu]))
+	open('clu-%s.bin' % config[0], 'wb').write(clu)
 
 
 def gamma(vin, gamma, scale):
 	return int(255 * scale * math.pow(vin / 255., gamma))
 
 def generate_lut(config):
-	lut = []
-	for i in xrange(256):
+	lut = bytearray()
+	for i in range(256):
 		lut.extend([gamma(i, g, config[1]) for g in config[2:]])
 		lut.append(0)
 
-	file('lut-%s.bin' % config[0], 'wb').write(''.join([chr(c) for c in lut]))
+	open('lut-%s.bin' % config[0], 'wb').write(lut)
 
 
 def main(argv):
